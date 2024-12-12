@@ -73,6 +73,8 @@ if(MSVC)
     xcheck_add_c_compiler_flag(/Zc:char8_t)
 endif()
 
+xcheck_add_c_compiler_flag(-fno-strict-aliasing)
+
 # MacOS and GCC 11 or later need -Wno-maybe-uninitialized
 # https://github.com/quickjs-ng/quickjs/issues/453
 if(APPLE AND CMAKE_C_COMPILER_ID STREQUAL "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL 11)

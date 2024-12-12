@@ -1,0 +1,122 @@
+name: build papi quickjs
+
+on: 
+  push:
+  workflow_dispatch:
+    inputs:
+      tag_date:
+        description: 'tag date'     
+        required: true
+      is_build_for_ohos:
+        description: 'Build for harmony platform'
+        type: boolean
+        default: true
+        required: false
+jobs:
+  build_macos:
+    name: macOS
+    runs-on: macos-13
+    steps:
+    - uses: actions/checkout@v3
+    - name: Run build script
+      run: |
+        cd $GITHUB_WORKSPACE
+        chmod +x make_osx.sh
+        sh ./make_osx.sh
+        
+  build_ios:
+    name: iOS
+    runs-on: macos-13
+    steps:
+    - uses: actions/checkout@v3
+    - name: Run build script
+      run: |
+        cd $GITHUB_WORKSPACE
+        chmod +x make_ios.sh
+        sh ./make_ios.sh
+
+  build_android:
+    name: Android 
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install NDK
+      run: |
+        cd ~
+        wget -O NDK -q https://dl.google.com/android/repository/android-ndk-r21b-linux-x86_64.zip
+        sudo apt install unzip -y
+        unzip -q NDK
+    - name: Run build script
+      run: |
+        cd $GITHUB_WORKSPACE
+        chmod +x make_android.sh
+        ANDROID_NDK=~/android-ndk-r21b ./make_android.sh
+  
+  build_ohos:
+    if: github.event.inputs.is_build_for_ohos == 'true'
+    name: OHOS 
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install NDK
+      run: |
+        cd ~
+        curl -O https://repo.huaweicloud.com/harmonyos/os/4.1-Release/ohos-sdk-windows_linux-public.tar.gz
+        tar xvfz ohos-sdk-windows_linux-public.tar.gz
+        cd ohos-sdk/linux
+        unzip -o -d ./ native-linux-x64-4.1.7.5-Release.zip
+    - name: Run build script
+      run: |
+        cd $GITHUB_WORKSPACE
+        chmod +x make_ohos.sh
+        OHOS_NDK_HOME=~/ohos-sdk/linux/native ./make_ohos.sh
+        
+  build_linux:
+    name: Linux 
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install LibC++
+      run: |
+        sudo apt-get update
+        sudo apt-get install clang
+        sudo apt-get install build-essential
+        sudo apt-get install libc++-dev
+        sudo apt-get install libc++abi-dev
+    - name: Run build script
+      run: |
+        cd $GITHUB_WORKSPACE
+        chmod +x make_linux64.sh
+        ./make_linux64.sh
+        
+  build_wasm:
+    name: wasm 
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install LibC++
+      run: |
+        sudo apt-get update
+        sudo apt-get install clang
+        sudo apt-get install build-essential
+        sudo apt-get install libc++-dev
+        sudo apt-get install libc++abi-dev
+    - name: Run build script
+      run: |
+        cd $GITHUB_WORKSPACE
+        chmod +x make_wasm.sh
+        ./make_wasm.sh
+        
+  build_window:
+    name: Windows MD
+    runs-on: windows-2019
+    steps:
+    - uses: actions/checkout@v3
+    - name: Insatll MSVC
+      uses: microsoft/setup-msbuild@v1.1
+    - name: Build
+      run: |
+        cd $GITHUB_WORKSPACE
+        .\make_win64.bat
+
+
