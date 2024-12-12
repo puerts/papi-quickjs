@@ -53,7 +53,6 @@ jobs:
         ANDROID_NDK=~/android-ndk-r21b ./make_android.sh
   
   build_ohos:
-    if: github.event.inputs.is_build_for_ohos == 'true'
     name: OHOS 
     runs-on: ubuntu-20.04
     steps:
@@ -81,8 +80,6 @@ jobs:
         sudo apt-get update
         sudo apt-get install clang
         sudo apt-get install build-essential
-        sudo apt-get install libc++-dev
-        sudo apt-get install libc++abi-dev
     - name: Run build script
       run: |
         cd $GITHUB_WORKSPACE
@@ -108,7 +105,7 @@ jobs:
         ./make_wasm.sh
         
   build_window:
-    name: Windows MD
+    name: Windows
     runs-on: windows-2019
     steps:
     - uses: actions/checkout@v3
