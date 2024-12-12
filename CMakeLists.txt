@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.9)
 
-project(quickjs LANGUAGES C)
+project(PapiQjs)
 
 include(CheckCCompilerFlag)
 include(GNUInstallDirs)
@@ -9,6 +9,7 @@ set(CMAKE_C_VISIBILITY_PRESET hidden)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
 set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 
 if(NOT CMAKE_BUILD_TYPE)
     message(STATUS "No build type selected, default to Release")
@@ -66,6 +67,10 @@ if(MSVC)
     xcheck_add_c_compiler_flag(/wd4820) # Padding added after construct
     xcheck_add_c_compiler_flag(/wd4996) # -Wdeprecated-declarations
     xcheck_add_c_compiler_flag(/wd5045) # Compiler will insert Spectre mitigation for memory load if /Qspectre switch specified
+    xcheck_add_c_compiler_flag(/wd4514)
+    xcheck_add_c_compiler_flag(/wd4514)
+    xcheck_add_c_compiler_flag(-fchar8_t)
+    xcheck_add_c_compiler_flag(/Zc:char8_t)
 endif()
 
 # MacOS and GCC 11 or later need -Wno-maybe-uninitialized
@@ -91,34 +96,6 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
     xcheck_add_c_compiler_flag(-fno-omit-frame-pointer)
 endif()
 
-macro(xoption OPTION_NAME OPTION_TEXT OPTION_DEFAULT)
-    option(${OPTION_NAME} ${OPTION_TEXT} ${OPTION_DEFAULT})
-    if(DEFINED ENV{${OPTION_NAME}})
-        # Allow setting the option through an environment variable.
-        set(${OPTION_NAME} $ENV{${OPTION_NAME}})
-    endif()
-    if(${OPTION_NAME})
-        add_definitions(-D${OPTION_NAME})
-    endif()
-    message(STATUS "  ${OPTION_NAME}: ${${OPTION_NAME}}")
-endmacro()
-
-xoption(BUILD_SHARED_LIBS "Build a shared library" OFF)
-if(BUILD_SHARED_LIBS)
-    message(STATUS "Building a shared library")
-endif()
-
-
-# QuickJS library
-#
-
-xoption(BUILD_QJS_LIBC "Build standard library modules as part of the library" OFF)
-macro(add_qjs_libc_if_needed target)
-    if(NOT BUILD_QJS_LIBC)
-        target_sources(${target} PRIVATE quickjs-libc.c)
-    endif()
-endmacro()
-
 set(qjs_sources
     quickjs/cutils.c
     quickjs/libbf.c
@@ -126,6 +103,16 @@ set(qjs_sources
     quickjs/libunicode.c
     quickjs/quickjs.c
 )
+
+add_definitions(-D_CHAR16T)
+add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+add_definitions(-D_SCL_SECURE_NO_WARNINGS)
+add_definitions(-DEASTL_OPENSOURCE=1)
+
+include_directories(EASTL/include)
+
+file(GLOB eastl_sources "EASTL/source/*.cpp")
+file(GLOB_RECURSE eastl_headers "EASTL/include/EASTL/**.h")
 
 list(APPEND qjs_defines _GNU_SOURCE)
 if(WIN32)
@@ -140,11 +127,15 @@ if(NOT MSVC)
     list(APPEND qjs_libs m)
 endif()
 
-add_library(PapiQjs SHARED ${qjs_sources})
+add_library(PapiQjs SHARED ${qjs_sources} ${eastl_headers} ${eastl_sources})
 target_compile_definitions(PapiQjs PRIVATE ${qjs_defines})
 target_include_directories(PapiQjs PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 target_link_libraries(PapiQjs PUBLIC ${qjs_libs})
+
+target_compile_definitions(PapiQjs PUBLIC EA_DEPRECATIONS_FOR_2024_APRIL=EA_DISABLED)
+target_compile_definitions(PapiQjs PUBLIC EA_DEPRECATIONS_FOR_2024_SEPT=EA_DISABLED)
+target_compile_definitions(PapiQjs PUBLIC EA_DEPRECATIONS_FOR_2025_APRIL=EA_DISABLED)
 
