@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.9)
 
-project(PapiQjs)
+project(PapiQjs LANGUAGES C CXX)
 
 include(CheckCCompilerFlag)
 include(GNUInstallDirs)
@@ -136,9 +136,9 @@ if(NOT MSVC)
 endif()
 
 if ( APPLE AND IOS )
-    add_library(PapiQjs STATIC ${qjs_sources} ${eastl_headers} ${eastl_sources})
+    add_library(PapiQjs STATIC ${qjs_sources} ${eastl_sources})
 else ()
-    add_library(PapiQjs SHARED ${qjs_sources} ${eastl_headers} ${eastl_sources})
+    add_library(PapiQjs SHARED ${qjs_sources} ${eastl_sources}) # if add eastl_headers will undefined symbol: __udivti3 __udivmodti4 
 endif()
 target_compile_definitions(PapiQjs PRIVATE ${qjs_defines})
 target_include_directories(PapiQjs PUBLIC
@@ -150,4 +150,3 @@ target_link_libraries(PapiQjs PUBLIC ${qjs_libs})
 target_compile_definitions(PapiQjs PUBLIC EA_DEPRECATIONS_FOR_2024_APRIL=EA_DISABLED)
 target_compile_definitions(PapiQjs PUBLIC EA_DEPRECATIONS_FOR_2024_SEPT=EA_DISABLED)
 target_compile_definitions(PapiQjs PUBLIC EA_DEPRECATIONS_FOR_2025_APRIL=EA_DISABLED)
-
