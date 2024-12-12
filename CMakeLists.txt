@@ -76,7 +76,7 @@ endif()
 xcheck_add_c_compiler_flag(-fno-strict-aliasing)
 
 if ( APPLE )
-    xcheck_add_c_compiler_flag(-Wshorten-64-to-32)
+    xcheck_add_c_compiler_flag(-Wno-shorten-64-to-32)
 endif()
 
 xcheck_add_c_compiler_flag(-Wno-unused-variable)
