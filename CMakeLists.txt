@@ -135,7 +135,11 @@ if(NOT MSVC)
     list(APPEND qjs_libs m)
 endif()
 
-add_library(PapiQjs SHARED ${qjs_sources} ${eastl_headers} ${eastl_sources})
+if ( APPLE AND IOS )
+    add_library(PapiQjs STATIC ${qjs_sources} ${eastl_headers} ${eastl_sources})
+else ()
+    add_library(PapiQjs SHARED ${qjs_sources} ${eastl_headers} ${eastl_sources})
+endif()
 target_compile_definitions(PapiQjs PRIVATE ${qjs_defines})
 target_include_directories(PapiQjs PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
