@@ -112,6 +112,10 @@ set(qjs_sources
     quickjs/quickjs.c
 )
 
+set(papi_sources
+    source/PapiQuickjsImpl.cpp
+)
+
 add_definitions(-D_CHAR16T)
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 add_definitions(-D_SCL_SECURE_NO_WARNINGS)
@@ -136,9 +140,9 @@ if(NOT MSVC)
 endif()
 
 if ( APPLE AND IOS )
-    add_library(PapiQjs STATIC ${qjs_sources} ${eastl_sources})
+    add_library(PapiQjs STATIC ${qjs_sources} ${eastl_sources} ${papi_sources})
 else ()
-    add_library(PapiQjs SHARED ${qjs_sources} ${eastl_sources}) # if add eastl_headers will undefined symbol: __udivti3 __udivmodti4 
+    add_library(PapiQjs SHARED ${qjs_sources} ${eastl_sources} ${papi_sources}) # if add eastl_headers will undefined symbol: __udivti3 __udivmodti4 
 endif()
 target_compile_definitions(PapiQjs PRIVATE ${qjs_defines})
 target_include_directories(PapiQjs PUBLIC
@@ -146,7 +150,10 @@ target_include_directories(PapiQjs PUBLIC
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 target_link_libraries(PapiQjs PUBLIC ${qjs_libs})
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -nostdlib")
 
 target_compile_definitions(PapiQjs PUBLIC EA_DEPRECATIONS_FOR_2024_APRIL=EA_DISABLED)
 target_compile_definitions(PapiQjs PUBLIC EA_DEPRECATIONS_FOR_2024_SEPT=EA_DISABLED)
 target_compile_definitions(PapiQjs PUBLIC EA_DEPRECATIONS_FOR_2025_APRIL=EA_DISABLED)
+target_compile_definitions(PapiQjs PUBLIC EASTL_DLL)
+
