@@ -1,6 +1,7 @@
 #include <EASTL/string.h>
+#include <EASTL/allocator_malloc.h>
 
 void GetPapiQuickjsImpl()
 {
-    eastl::string str = "hello world";
+    eastl::basic_string<char, eastl::allocator_malloc> str = "hello world";
 }
