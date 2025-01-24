@@ -29,6 +29,14 @@ struct pesapi_env_ref__
     eastl::weak_ptr<int> env_life_cycle_tracker;
 };
 
+struct pesapi_value__ {
+	explicit pesapi_value__(JSValue jsvalue)
+		: v(jsvalue)
+	{
+	}
+	JSValue v;
+};
+
 struct pesapi_value_ref__ : pesapi_env_ref__
 {
     explicit pesapi_value_ref__(JSContext *ctx, JSValue v, uint32_t field_count)
@@ -156,10 +164,72 @@ JSValue literal_values_null = JS_NULL;
 JSValue literal_values_true = JS_TRUE;
 JSValue literal_values_false = JS_FALSE;
 
+template<typename Func>
+pesapi_value pesapi_create_generic0(pesapi_env env, Func createFunc)
+{
+    auto ctx = qjsContextFromPesapiEnv(env);
+    if (ctx)
+    {
+        auto ret = allocValueInCurrentScope(ctx);
+        if (ret)
+        {
+            *ret = createFunc(ctx);
+            return pesapiValueFromQjsValue(ret);
+        }
+    }
+    return nullptr;
+}
+
+template<typename T, typename Func>
+pesapi_value pesapi_create_generic1(pesapi_env env, T value, Func createFunc)
+{
+    auto ctx = qjsContextFromPesapiEnv(env);
+    if (ctx)
+    {
+        auto ret = allocValueInCurrentScope(ctx);
+        if (ret)
+        {
+            *ret = createFunc(ctx, value);
+            return pesapiValueFromQjsValue(ret);
+        }
+    }
+    return nullptr;
+}
+
+template<typename T1, typename T2, typename Func>
+pesapi_value pesapi_create_generic2(pesapi_env env, T1 v1, T2 v2, Func createFunc)
+{
+    auto ctx = qjsContextFromPesapiEnv(env);
+    if (ctx)
+    {
+        auto ret = allocValueInCurrentScope(ctx);
+        if (ret)
+        {
+            *ret = createFunc(ctx, v1, v2);
+            return pesapiValueFromQjsValue(ret);
+        }
+    }
+    return nullptr;
+}
+
+template<typename T, typename Func>
+T pesapi_get_value_generic(pesapi_env env, pesapi_value pvalue, Func convertFunc)
+{
+    auto ctx = qjsContextFromPesapiEnv(env);
+    if (ctx != nullptr)
+    {
+        T ret = 0;
+        convertFunc(ctx, &ret, pvalue->v);
+        return ret;
+    }
+    return 0;
+}
+
+
 // value process
 pesapi_value pesapi_create_null(pesapi_env env)
 {
-    return pesapiValueFromQjsValue(&literal_values_null);
+    return pesapiValueFromQjsValue(&literal_values_null); //避免在Scope上分配
 }
 
 pesapi_value pesapi_create_undefined(pesapi_env env)
@@ -174,127 +244,52 @@ pesapi_value pesapi_create_boolean(pesapi_env env, bool value)
 
 pesapi_value pesapi_create_int32(pesapi_env env, int32_t value)
 {
-    auto ctx = qjsContextFromPesapiEnv(env);
-	if (ctx)
-	{
-		auto ret = allocValueInCurrentScope(ctx);
-		if (ret)
-		{
-			*ret = JS_NewInt32(ctx, value);
-			return pesapiValueFromQjsValue(ret);
-		}
-	}
-	return nullptr;
+    return pesapi_create_generic1(env, value, JS_NewInt32);
 }
 
 pesapi_value pesapi_create_uint32(pesapi_env env, uint32_t value)
 {
-    auto ctx = qjsContextFromPesapiEnv(env);
-	if (ctx)
-	{
-		auto ret = allocValueInCurrentScope(ctx);
-		if (ret)
-		{
-			*ret = JS_NewUint32(ctx, value);
-			return pesapiValueFromQjsValue(ret);
-		}
-	}
-	return nullptr;
+    return pesapi_create_generic1(env, value, JS_NewUint32);
 }
 
 pesapi_value pesapi_create_int64(pesapi_env env, int64_t value)
 {
-    auto ctx = qjsContextFromPesapiEnv(env);
-	if (ctx)
-	{
-		auto ret = allocValueInCurrentScope(ctx);
-		if (ret)
-		{
-			*ret = JS_NewInt64(ctx, value);
-			return pesapiValueFromQjsValue(ret);
-		}
-	}
-	return nullptr;
+    return pesapi_create_generic1(env, value, JS_NewInt64);
 }
 
 pesapi_value pesapi_create_uint64(pesapi_env env, uint64_t value)
 {
-	return pesapi_create_int64(env, value);
+    return pesapi_create_generic1(env, value, JS_NewInt64);
 }
 
 pesapi_value pesapi_create_double(pesapi_env env, double value)
 {
-    auto ctx = qjsContextFromPesapiEnv(env);
-	if (ctx)
-	{
-		auto ret = allocValueInCurrentScope(ctx);
-		if (ret)
-		{
-			*ret = JS_NewFloat64(ctx, value);
-			return pesapiValueFromQjsValue(ret);
-		}
-	}
-	return nullptr;
+    return pesapi_create_generic1(env, value, JS_NewFloat64);
 }
 
-pesapi_value pesapi_create_string_utf8(pesapi_env env, const char* str, size_t length)
+pesapi_value pesapi_create_string_utf8(pesapi_env env, const char *str, size_t length)
 {
-    auto ctx = qjsContextFromPesapiEnv(env);
-	if (str && ctx)
-	{
-		auto ret = allocValueInCurrentScope(ctx);
-		if (ret && str)
-		{
-			*ret = JS_NewStringLen(ctx, str, length);
-			return pesapiValueFromQjsValue(ret);
-		}
-	}
-	return nullptr;
+    return pesapi_create_generic2(env, str, length, JS_NewStringLen);
 }
 
-pesapi_value pesapi_create_binary(pesapi_env env, void* bin, size_t length)
+static JSValue JS_NewArrayBufferWrap(JSContext *ctx, void *bin, size_t len)
 {
-    auto ctx = qjsContextFromPesapiEnv(env);
-	if (bin && ctx)
-	{
-		auto ret = allocValueInCurrentScope(ctx);
-		if (ret)
-		{
-			*ret = JS_NewArrayBuffer(ctx, (uint8_t *) bin, length, nullptr, nullptr, false);
-			return pesapiValueFromQjsValue(ret);
-		}
-	}
-	return nullptr;
+    return JS_NewArrayBuffer(ctx, (uint8_t *) bin, len, nullptr, nullptr, false);
+}
+
+pesapi_value pesapi_create_binary(pesapi_env env, void *bin, size_t length)
+{
+    return pesapi_create_generic2(env, bin, length, JS_NewArrayBufferWrap);
 }
 
 pesapi_value pesapi_create_array(pesapi_env env)
 {
-    auto ctx = qjsContextFromPesapiEnv(env);
-	if (ctx)
-	{
-		auto ret = allocValueInCurrentScope(ctx);
-		if (ret)
-		{
-			*ret = JS_NewArray(ctx);
-			return pesapiValueFromQjsValue(ret);
-		}
-	}
-	return nullptr;
+    return pesapi_create_generic0(env, JS_NewArray);
 }
 
 pesapi_value pesapi_create_object(pesapi_env env)
 {
-    auto ctx = qjsContextFromPesapiEnv(env);
-	if (ctx)
-	{
-		auto ret = allocValueInCurrentScope(ctx);
-		if (ret)
-		{
-			*ret = JS_NewObject(ctx);
-			return pesapiValueFromQjsValue(ret);
-		}
-	}
-	return nullptr;
+    return pesapi_create_generic0(env, JS_NewObject);
 }
 /*
 pesapi_value pesapi_create_function(pesapi_env env, pesapi_callback native_impl, void* data, pesapi_function_finalize finalize)
@@ -314,49 +309,44 @@ pesapi_value pesapi_create_class(pesapi_env env, const void* type_id)
         return nullptr;
     return v8impl::PesapiValueFromV8LocalValue(cls.ToLocalChecked());
 }
+*/
 
 bool pesapi_get_value_bool(pesapi_env env, pesapi_value pvalue)
 {
-    auto context = v8impl::V8LocalContextFromPesapiEnv(env);
-    auto value = v8impl::V8LocalValueFromPesapiValue(pvalue);
-    return value->BooleanValue(context->GetIsolate());
+    auto ctx = qjsContextFromPesapiEnv(env);
+    if (ctx != nullptr)
+    {
+        return JS_ToBool(ctx, pvalue->v);
+    }
+    return false;
 }
 
 int32_t pesapi_get_value_int32(pesapi_env env, pesapi_value pvalue)
 {
-    auto context = v8impl::V8LocalContextFromPesapiEnv(env);
-    auto value = v8impl::V8LocalValueFromPesapiValue(pvalue);
-    return value->Int32Value(context).ToChecked();
+    return pesapi_get_value_generic<int32_t>(env, pvalue, JS_ToInt32);
 }
 
 uint32_t pesapi_get_value_uint32(pesapi_env env, pesapi_value pvalue)
 {
-    auto context = v8impl::V8LocalContextFromPesapiEnv(env);
-    auto value = v8impl::V8LocalValueFromPesapiValue(pvalue);
-    return value->Uint32Value(context).ToChecked();
+    return pesapi_get_value_generic<uint32_t>(env, pvalue, JS_ToUint32);
 }
 
-int64_t pesapi_get_value_int64(pesapi_env env, pesapi_value pvalue)
+int64_t pesapi_get_value_int64(pesapi_env env, pesapi_value pvalue) // TODO: 得用Bigint？？
 {
-    auto context = v8impl::V8LocalContextFromPesapiEnv(env);
-    auto value = v8impl::V8LocalValueFromPesapiValue(pvalue);
-    return value->IsBigInt() ? value->ToBigInt(context).ToLocalChecked()->Int64Value() : 0;
+    return pesapi_get_value_generic<int64_t>(env, pvalue, JS_ToInt64);
 }
 
 uint64_t pesapi_get_value_uint64(pesapi_env env, pesapi_value pvalue)
 {
-    auto context = v8impl::V8LocalContextFromPesapiEnv(env);
-    auto value = v8impl::V8LocalValueFromPesapiValue(pvalue);
-    return value->IsBigInt() ? value->ToBigInt(context).ToLocalChecked()->Uint64Value() : 0;
+    return (uint64_t)pesapi_get_value_int64(env, pvalue);
 }
 
 double pesapi_get_value_double(pesapi_env env, pesapi_value pvalue)
 {
-    auto context = v8impl::V8LocalContextFromPesapiEnv(env);
-    auto value = v8impl::V8LocalValueFromPesapiValue(pvalue);
-    return value->NumberValue(context).ToChecked();
+    return pesapi_get_value_generic<double>(env, pvalue, JS_ToFloat64);
 }
 
+/*
 const char* pesapi_get_value_string_utf8(pesapi_env env, pesapi_value pvalue, char* buf, size_t* bufsize)
 {
     auto context = v8impl::V8LocalContextFromPesapiEnv(env);
