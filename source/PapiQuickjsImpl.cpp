@@ -254,12 +254,12 @@ pesapi_value pesapi_create_uint32(pesapi_env env, uint32_t value)
 
 pesapi_value pesapi_create_int64(pesapi_env env, int64_t value)
 {
-    return pesapi_create_generic1(env, value, JS_NewInt64);
+    return pesapi_create_generic1(env, value, JS_NewBigInt64);
 }
 
 pesapi_value pesapi_create_uint64(pesapi_env env, uint64_t value)
 {
-    return pesapi_create_generic1(env, value, JS_NewInt64);
+    return pesapi_create_generic1(env, value, JS_NewBigUint64);
 }
 
 pesapi_value pesapi_create_double(pesapi_env env, double value)
@@ -331,14 +331,14 @@ uint32_t pesapi_get_value_uint32(pesapi_env env, pesapi_value pvalue)
     return pesapi_get_value_generic<uint32_t>(env, pvalue, JS_ToUint32);
 }
 
-int64_t pesapi_get_value_int64(pesapi_env env, pesapi_value pvalue) // TODO: 得用Bigint？？
+int64_t pesapi_get_value_int64(pesapi_env env, pesapi_value pvalue)
 {
-    return pesapi_get_value_generic<int64_t>(env, pvalue, JS_ToInt64);
+    return pesapi_get_value_generic<int64_t>(env, pvalue, JS_ToBigInt64);
 }
 
 uint64_t pesapi_get_value_uint64(pesapi_env env, pesapi_value pvalue)
 {
-    return (uint64_t)pesapi_get_value_int64(env, pvalue);
+    return pesapi_get_value_generic<uint64_t>(env, pvalue, JS_ToBigUint64);
 }
 
 double pesapi_get_value_double(pesapi_env env, pesapi_value pvalue)
