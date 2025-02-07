@@ -311,14 +311,19 @@ pesapi_value pesapi_create_class(pesapi_env env, const void* type_id)
 }
 */
 
+int JS_ToBool2(JSContext *ctx, bool *pres, JSValue val)
+{
+    int res = JS_ToBool(ctx, val);
+    if (res != -1)
+    {
+        *pres = (bool)res;
+    }
+    return res;
+}
+
 bool pesapi_get_value_bool(pesapi_env env, pesapi_value pvalue)
 {
-    auto ctx = qjsContextFromPesapiEnv(env);
-    if (ctx != nullptr)
-    {
-        return JS_ToBool(ctx, pvalue->v);
-    }
-    return false;
+    return pesapi_get_value_generic<bool>(env, pvalue, JS_ToBool2);
 }
 
 int32_t pesapi_get_value_int32(pesapi_env env, pesapi_value pvalue)
