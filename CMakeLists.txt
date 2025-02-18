@@ -142,8 +142,13 @@ if(NOT MSVC)
     list(APPEND qjs_libs m)
 endif()
 
+set(papi_register_sources
+    ClassRegister/source/JSClassRegister.cpp
+)
+
 if ( APPLE AND IOS )
     add_library(PapiQjs STATIC ${qjs_sources} ${eastl_sources} ${papi_sources})
+    add_library(PapiRegister STATIC ${papi_register_sources})
 else ()
     # 在Windows上需要显式生成导入库
     add_library(PapiQjs SHARED ${qjs_sources} ${eastl_sources} ${papi_sources}) # if add eastl_headers will undefined symbol: __udivti3 __udivmodti4 
@@ -159,6 +164,7 @@ else ()
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
     )
+    add_library(PapiRegister SHARED ${papi_register_sources})
 endif()
 target_compile_definitions(PapiQjs PRIVATE ${qjs_defines})
 target_include_directories(PapiQjs PUBLIC
@@ -173,6 +179,7 @@ target_compile_definitions(PapiQjs PUBLIC EA_DEPRECATIONS_FOR_2024_SEPT=EA_DISAB
 target_compile_definitions(PapiQjs PUBLIC EA_DEPRECATIONS_FOR_2025_APRIL=EA_DISABLED)
 #target_compile_definitions(PapiQjs PUBLIC EASTL_DLL)
 target_compile_definitions(PapiQjs PUBLIC USING_REGISTER_API_SHARED)
+target_compile_definitions(PapiRegister PUBLIC BUILD_REGISTER_API_SHARED)
 
 if ( APPLE AND NOT IOS OR MSVC OR LINUX )
 
