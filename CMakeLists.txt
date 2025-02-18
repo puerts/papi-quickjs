@@ -172,6 +172,8 @@ target_compile_definitions(PapiQjs PUBLIC EA_DEPRECATIONS_FOR_2025_APRIL=EA_DISA
 #target_compile_definitions(PapiQjs PUBLIC EASTL_DLL)
 target_compile_definitions(PapiQjs PUBLIC USING_REGISTER_API_SHARED)
 
+if ( APPLE AND NOT IOS OR MSVC OR LINUX )
+
 # 配置GTest
 set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
 set(BUILD_GTEST ON CACHE BOOL "" FORCE)
@@ -211,3 +213,5 @@ add_test(NAME cpp_object_mapper_test
     COMMAND cpp_object_mapper_test
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
+
+endif()
