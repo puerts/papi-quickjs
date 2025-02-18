@@ -124,6 +124,7 @@ add_definitions(-DEASTL_OPENSOURCE=1)
 
 include_directories(include quickjs)
 include_directories(EASTL/include)
+include_directories(ClassRegister/include)
 
 file(GLOB eastl_sources "EASTL/source/*.cpp")
 file(GLOB_RECURSE eastl_headers "EASTL/include/EASTL/**.h")

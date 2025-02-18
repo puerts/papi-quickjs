@@ -6,6 +6,7 @@ namespace pesapi
 namespace qjsimpl
 {
 extern pesapi_ffi g_pesapi_ffi;
+
 void CppObjectMapper::Initialize(JSContext* ctx)
 {
 
