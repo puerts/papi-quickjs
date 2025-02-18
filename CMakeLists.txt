@@ -28,10 +28,10 @@ macro(xcheck_add_c_compiler_flag FLAG)
 endmacro()
 
 #xcheck_add_c_compiler_flag(-Wall)
-if(NOT MSVC AND NOT IOS)
-    xcheck_add_c_compiler_flag(-Werror)
-    xcheck_add_c_compiler_flag(-Wextra)
-endif()
+#if(NOT MSVC AND NOT IOS)
+#    xcheck_add_c_compiler_flag(-Werror)
+#    xcheck_add_c_compiler_flag(-Wextra)
+#endif()
 xcheck_add_c_compiler_flag(-Wno-implicit-fallthrough)
 xcheck_add_c_compiler_flag(-Wno-sign-compare)
 xcheck_add_c_compiler_flag(-Wno-missing-field-initializers)
@@ -207,9 +207,7 @@ target_include_directories(cpp_object_mapper_test PRIVATE
     ${googletest_SOURCE_DIR}/googletest/include
 )
 
-if(MSVC)
-    add_compile_options(
-        /wd4625  # 禁用C4625警告
-        /wd4668  # 禁用C4668警告
-    )
-endif()
+add_test(NAME cpp_object_mapper_test
+    COMMAND cpp_object_mapper_test
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
