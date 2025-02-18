@@ -188,19 +188,19 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 enable_testing()
+include(GoogleTest)
+
 
 add_executable(cpp_object_mapper_test 
     test/CppObjectMapperTest.cpp
 )
+
 target_link_libraries(cpp_object_mapper_test
     PRIVATE
     PapiQjs
     gtest
     gtest_main
 )
-
-include(GoogleTest)
-gtest_discover_tests(cpp_object_mapper_test)
 
 target_include_directories(cpp_object_mapper_test PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -209,9 +209,6 @@ target_include_directories(cpp_object_mapper_test PRIVATE
     ${googletest_SOURCE_DIR}/googletest/include
 )
 
-add_test(NAME cpp_object_mapper_test
-    COMMAND cpp_object_mapper_test
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-)
+gtest_discover_tests(cpp_object_mapper_test)
 
 endif()
