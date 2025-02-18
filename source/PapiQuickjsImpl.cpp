@@ -62,7 +62,8 @@ struct pesapi_value_ref__ : pesapi_env_ref__
     uint32_t internal_field_count;
     void* internal_fields[0];
 };
-
+namespace pesapi
+{
 namespace qjsimpl
 {
 static struct pesapi_scope__ *getCurrentScope(JSContext *ctx)
@@ -75,6 +76,7 @@ static void setCurrentScope(JSContext *ctx, struct pesapi_scope__ *scope)
 	JS_SetContextOpaque(ctx, scope);
 }
 }
+}
 
 struct pesapi_scope__
 {
@@ -83,8 +85,8 @@ struct pesapi_scope__
     explicit pesapi_scope__(JSContext *ctx)
 	{
 		this->ctx = ctx;
-		prev_scope = qjsimpl::getCurrentScope(ctx);
-		qjsimpl::setCurrentScope(ctx, this);
+		prev_scope = pesapi::qjsimpl::getCurrentScope(ctx);
+		pesapi::qjsimpl::setCurrentScope(ctx, this);
 
 		values_used = 0;
 
@@ -134,12 +136,14 @@ struct pesapi_scope__
 			js_free(ctx, dynamic_alloc_values[i]);
 		}
 		dynamic_alloc_values.clear();
-		qjsimpl::setCurrentScope(ctx, prev_scope);
+		pesapi::qjsimpl::setCurrentScope(ctx, prev_scope);
 	}
 };
 
 static_assert(sizeof(pesapi_scope_memory) >= sizeof(pesapi_scope__), "sizeof(pesapi_scope__) > sizeof(pesapi_scope_memory__)");
 
+namespace pesapi
+{
 namespace qjsimpl
 {
 inline pesapi_value pesapiValueFromQjsValue(JSValue* v)
@@ -1070,3 +1074,4 @@ pesapi_ffi g_pesapi_ffi {
 };
 */
 }    // namespace qjsimpl
+}    // namespace pesapi
