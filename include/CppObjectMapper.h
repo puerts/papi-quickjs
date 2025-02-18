@@ -22,3 +22,6 @@ private:
 
 }  // namespace qjsimpl
 }  // namespace pesapi
+
+
+PESAPI_MODULE_EXPORT pesapi_env_ref create_qjs_env();
