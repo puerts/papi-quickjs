@@ -1,9 +1,13 @@
 #include "CppObjectMapper.h"
 
-namespace puerts
+namespace pesapi
 {
 namespace qjsimpl
 {
+void CppObjectMapper::Initialize(JSContext* ctx)
+{
+
+}
 
 }
 }

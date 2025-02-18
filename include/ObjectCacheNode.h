@@ -11,7 +11,7 @@
 #include "NamespaceDef.h"
 #include "quickjs.h"
 #include <memory>
-namespace puerts
+namespace pesapi
 {
 namespace qjsimpl
 {
