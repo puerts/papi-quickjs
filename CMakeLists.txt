@@ -124,7 +124,7 @@ add_definitions(-DEASTL_OPENSOURCE=1)
 
 include_directories(include quickjs)
 include_directories(EASTL/include)
-include_directories(ClassRegister/include)
+include_directories(papi-register/include)
 
 file(GLOB eastl_sources "EASTL/source/*.cpp")
 file(GLOB_RECURSE eastl_headers "EASTL/include/EASTL/**.h")
@@ -143,7 +143,7 @@ if(NOT MSVC)
 endif()
 
 set(papi_register_sources
-    ClassRegister/source/JSClassRegister.cpp
+    papi-register/source/JSClassRegister.cpp
 )
 
 if ( APPLE AND IOS )
