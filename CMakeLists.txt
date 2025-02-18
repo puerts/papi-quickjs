@@ -156,5 +156,5 @@ target_link_libraries(PapiQjs PUBLIC ${qjs_libs})
 target_compile_definitions(PapiQjs PUBLIC EA_DEPRECATIONS_FOR_2024_APRIL=EA_DISABLED)
 target_compile_definitions(PapiQjs PUBLIC EA_DEPRECATIONS_FOR_2024_SEPT=EA_DISABLED)
 target_compile_definitions(PapiQjs PUBLIC EA_DEPRECATIONS_FOR_2025_APRIL=EA_DISABLED)
-target_compile_definitions(PapiQjs PUBLIC EASTL_DLL)
+#target_compile_definitions(PapiQjs PUBLIC EASTL_DLL)
 
