@@ -21,18 +21,6 @@ enum
 
 struct pesapi_env_ref__
 {
-    explicit pesapi_env_ref__(JSContext *ctx)
-        : context_persistent(JS_DupContext(ctx))
-        , ref_count(1)
-        //, env_life_cycle_tracker(puerts::DataTransfer::GetJsEnvLifeCycleTracker(context->GetIsolate()))
-    {
-    }
-    
-    ~pesapi_env_ref__()
-    {
-        JS_FreeContext(context_persistent);
-    }
-
     JSContext *context_persistent;
     int ref_count;
     eastl::weak_ptr<int> env_life_cycle_tracker;
@@ -48,16 +36,6 @@ struct pesapi_value__ {
 
 struct pesapi_value_ref__ : pesapi_env_ref__
 {
-    explicit pesapi_value_ref__(JSContext *ctx, JSValue v, uint32_t field_count)
-        : pesapi_env_ref__(ctx), value_persistent(JS_DupValue(ctx, v)), internal_field_count(field_count)
-    {
-    }
-    
-    ~pesapi_value_ref__()
-    {
-        JS_FreeValue(context_persistent, value_persistent);
-    }
-
     JSValue value_persistent;
     uint32_t internal_field_count;
     void* internal_fields[0];
@@ -66,6 +44,33 @@ namespace pesapi
 {
 namespace qjsimpl
 {
+
+static void pesapi_env_ref_init(pesapi_env_ref__* env_ref, JSContext *ctx)
+{
+    env_ref->context_persistent = JS_DupContext(ctx);
+    env_ref->ref_count = 1;
+    // TODO: env_life_cycle_tracker init;
+}
+
+
+static void pesapi_env_ref_cleanup(pesapi_env_ref__* env_ref)
+{
+    JS_FreeContext(env_ref->context_persistent);
+}
+
+static void pesapi_value_ref_init(pesapi_value_ref__* value_ref, JSContext *ctx, JSValue v, uint32_t field_count)
+{
+    pesapi_env_ref_init(value_ref, ctx);
+    value_ref->value_persistent = JS_DupValue(ctx, v);
+    value_ref->internal_field_count = field_count;
+}
+
+static void pesapi_value_ref_cleanup(pesapi_value_ref__* value_ref)
+{
+    JS_FreeValue(value_ref->context_persistent, value_ref->value_persistent);
+    pesapi_env_ref_cleanup(value_ref);
+}
+
 static struct pesapi_scope__ *getCurrentScope(JSContext *ctx)
 {
 	return (struct pesapi_scope__ *) JS_GetContextOpaque(ctx);
@@ -594,7 +599,10 @@ void pesapi_throw_by_string(pesapi_callback_info pinfo, const char* msg)
 pesapi_env_ref pesapi_create_env_ref(pesapi_env env)
 {
     auto ctx = qjsContextFromPesapiEnv(env);
-    return new pesapi_env_ref__(ctx);
+    auto ret = (pesapi_env_ref)malloc(sizeof(pesapi_env_ref__));
+    memset(ret, 0, sizeof(pesapi_env_ref__));
+    pesapi_env_ref_init(ret, ctx);
+    return ret;
 }
 
 bool pesapi_env_ref_is_valid(pesapi_env_ref env_ref)
@@ -621,14 +629,11 @@ void pesapi_release_env_ref(pesapi_env_ref env_ref)
 {
     if (--env_ref->ref_count == 0)
     {
-        if (env_ref->env_life_cycle_tracker.expired())
+        if (!env_ref->env_life_cycle_tracker.expired())
         {
-            ::operator delete(static_cast<void*>(env_ref));
+            pesapi_env_ref_cleanup(env_ref);
         }
-        else
-        {
-            delete env_ref;
-        }
+        free(env_ref);
     }
 }
 
@@ -685,9 +690,9 @@ void pesapi_release_value_ref(pesapi_value_ref value_ref)
     {
         if (!value_ref->env_life_cycle_tracker.expired())
         {
-            value_ref->~pesapi_value_ref__();
+            pesapi_value_ref_cleanup(value_ref);
         }
-        ::operator delete(static_cast<void*>(value_ref));
+        free(value_ref);
     }
 }
 
