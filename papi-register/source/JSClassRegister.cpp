@@ -10,7 +10,8 @@
 #if USING_IN_UNREAL_ENGINE
 #include "UObject/Class.h"
 #endif
-#include <map>
+#include <EASTL/map.h>
+#include <EASTL/allocator_malloc.h>
 #include <cstring>
 
 namespace PUERTS_NAMESPACE
@@ -111,12 +112,12 @@ public:
 #endif
 
 private:
-    std::map<const void*, JSClassDefinition*> CDataIdToClassDefinition;
-    std::map<PString, JSClassDefinition*> CDataNameToClassDefinition;
+    eastl::map<const void*, JSClassDefinition*, eastl::less<const void*>, eastl::allocator_malloc> CDataIdToClassDefinition;
+    eastl::map<PString, JSClassDefinition*, eastl::less<PString>, eastl::allocator_malloc> CDataNameToClassDefinition;
     pesapi_class_not_found_callback ClassNotFoundCallback = nullptr;
 #if USING_IN_UNREAL_ENGINE
-    std::map<PString, AddonRegisterFunc> AddonRegisterInfos;
-    std::map<FString, JSClassDefinition*> StructNameToClassDefinition;
+    eastl::map<PString, AddonRegisterFunc, eastl::less<const void*>, eastl::allocator_malloc> AddonRegisterInfos;
+    eastl::map<FString, JSClassDefinition*, eastl::less<const void*>, eastl::allocator_malloc> StructNameToClassDefinition;
 #endif
 };
 
@@ -170,18 +171,18 @@ void JSClassRegister::RegisterClass(const JSClassDefinition& ClassDefinition)
 
 void SetReflectoinInfo(JSFunctionInfo* Methods, const NamedFunctionInfo* MethodInfos)
 {
-    std::map<PString, std::tuple<int, const NamedFunctionInfo*>> InfoMap;
+    eastl::map<PString, eastl::tuple<int, const NamedFunctionInfo*>, eastl::less<PString>, eastl::allocator_malloc> InfoMap;
     const NamedFunctionInfo* MethodInfo = MethodInfos;
     while (MethodInfo->Name)
     {
         auto Iter = InfoMap.find(MethodInfo->Name);
         if (Iter == InfoMap.end())
         {
-            InfoMap[MethodInfo->Name] = std::make_tuple(1, MethodInfo);
+            InfoMap[MethodInfo->Name] = eastl::make_tuple(1, MethodInfo);
         }
         else
         {
-            std::get<0>(Iter->second) = 2;
+            eastl::get<0>(Iter->second) = 2;
         }
         ++MethodInfo;
     }
@@ -190,9 +191,9 @@ void SetReflectoinInfo(JSFunctionInfo* Methods, const NamedFunctionInfo* MethodI
     while (Method->Name)
     {
         auto Iter = InfoMap.find(Method->Name);
-        if (Iter != InfoMap.end() && std::get<0>(Iter->second) == 1)
+        if (Iter != InfoMap.end() && eastl::get<0>(Iter->second) == 1)
         {
-            Method->ReflectionInfo = std::get<1>(Iter->second)->Type;
+            Method->ReflectionInfo = eastl::get<1>(Iter->second)->Type;
         }
         ++Method;
     }

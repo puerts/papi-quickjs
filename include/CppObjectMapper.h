@@ -14,10 +14,12 @@ namespace qjsimpl
 class CppObjectMapper
 {
 public:
-    void Initialize(JSContext* ctx);
+    void Initialize(JSContext* ctx_);
 private:
     eastl::unordered_map<const void*, FObjectCacheNode, eastl::hash<const void*>, eastl::equal_to<const void*>, eastl::allocator_malloc> CDataCache;
     eastl::unordered_map<const void*, JSValue, eastl::hash<const void*>, eastl::equal_to<const void*>, eastl::allocator_malloc> TypeIdToFunctionMap;
+
+    JSContext* ctx;
 };
 
 }  // namespace qjsimpl

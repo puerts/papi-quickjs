@@ -7,9 +7,10 @@ namespace qjsimpl
 {
 extern pesapi_ffi g_pesapi_ffi;
 
-void CppObjectMapper::Initialize(JSContext* ctx)
+void CppObjectMapper::Initialize(JSContext* ctx_)
 {
-
+    ctx = ctx_;
+    JS_SetContextOpaque(ctx, this);
 }
 
 }
