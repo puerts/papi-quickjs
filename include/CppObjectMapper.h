@@ -11,11 +11,19 @@ namespace pesapi
 namespace qjsimpl
 {
 
-class CppObjectMapper
+struct CppObjectMapper
 {
-public:
     void Initialize(JSContext* ctx_);
-private:
+    
+    CppObjectMapper(const CppObjectMapper&) = delete;
+    CppObjectMapper& operator=(const CppObjectMapper&) = delete;
+    
+    void* operator new(size_t) = delete;
+    void operator delete(void*) = delete;
+
+    CppObjectMapper() = default;
+    ~CppObjectMapper() = default;
+
     eastl::unordered_map<const void*, FObjectCacheNode, eastl::hash<const void*>, eastl::equal_to<const void*>, eastl::allocator_malloc> CDataCache;
     eastl::unordered_map<const void*, JSValue, eastl::hash<const void*>, eastl::equal_to<const void*>, eastl::allocator_malloc> TypeIdToFunctionMap;
 
