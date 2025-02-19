@@ -8,8 +8,6 @@
 
 #pragma once
 
-#include "functional"
-
 #if USING_IN_UNREAL_ENGINE
 #include "CoreMinimal.h"
 
@@ -22,8 +20,6 @@ PRAGMA_ENABLE_UNDEFINED_IDENTIFIER_WARNINGS
 #define FORCEINLINE V8_INLINE
 #define UPTRINT uintptr_t
 #endif
-
-#include <string>
 
 #include "PuertsNamespaceDef.h"
 
@@ -138,7 +134,9 @@ void REGISTER_API RegisterJSClass(const JSClassDefinition& ClassDefinition);
 void REGISTER_API SetClassTypeInfo(const void* TypeId, const NamedFunctionInfo* ConstructorInfos, const NamedFunctionInfo* MethodInfos,
     const NamedFunctionInfo* FunctionInfos, const NamedPropertyInfo* PropertyInfos, const NamedPropertyInfo* VariableInfos);
 
-void REGISTER_API ForeachRegisterClass(std::function<void(const JSClassDefinition* ClassDefinition)>);
+typedef void (*ClassDefinitionForeachCallback)(const JSClassDefinition* ClassDefinition);
+
+void REGISTER_API ForeachRegisterClass(ClassDefinitionForeachCallback Callback);
 
 REGISTER_API const JSClassDefinition* FindClassByID(const void* TypeId);
 

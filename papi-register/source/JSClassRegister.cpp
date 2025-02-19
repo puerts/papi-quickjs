@@ -12,7 +12,7 @@
 #endif
 #include <EASTL/map.h>
 #include <EASTL/allocator_malloc.h>
-#include <cstring>
+#include <string.h>
 
 namespace PUERTS_NAMESPACE
 {
@@ -28,14 +28,14 @@ static T* PropertyInfoDuplicate(T* Arr)
         if (Arr[Count++].Name == nullptr)
             break;
     }
-    T* Ret = new T[Count];
+    T* Ret = (T*)::malloc(sizeof(T) *Count);
     ::memcpy(Ret, Arr, sizeof(T) * Count);
     return Ret;
 }
 
 JSClassDefinition* JSClassDefinitionDuplicate(const JSClassDefinition* ClassDefinition)
 {
-    auto Ret = new JSClassDefinition;
+    auto Ret = (JSClassDefinition*)::malloc(sizeof(JSClassDefinition));
     ::memcpy(Ret, ClassDefinition, sizeof(JSClassDefinition));
     Ret->Methods = PropertyInfoDuplicate(ClassDefinition->Methods);
     Ret->Functions = PropertyInfoDuplicate(ClassDefinition->Functions);
@@ -51,16 +51,16 @@ JSClassDefinition* JSClassDefinitionDuplicate(const JSClassDefinition* ClassDefi
 
 void JSClassDefinitionDelete(JSClassDefinition* ClassDefinition)
 {
-    delete[] ClassDefinition->Methods;
-    delete[] ClassDefinition->Functions;
-    delete[] ClassDefinition->Properties;
-    delete[] ClassDefinition->Variables;
-    delete[] ClassDefinition->ConstructorInfos;
-    delete[] ClassDefinition->MethodInfos;
-    delete[] ClassDefinition->FunctionInfos;
-    delete[] ClassDefinition->PropertyInfos;
-    delete[] ClassDefinition->VariableInfos;
-    delete ClassDefinition;
+    ::free(ClassDefinition->Methods);
+    ::free(ClassDefinition->Functions);
+    ::free(ClassDefinition->Properties);
+    ::free(ClassDefinition->Variables);
+    ::free(ClassDefinition->ConstructorInfos);
+    ::free(ClassDefinition->MethodInfos);
+    ::free(ClassDefinition->FunctionInfos);
+    ::free(ClassDefinition->PropertyInfos);
+    ::free(ClassDefinition->VariableInfos);
+    ::free(ClassDefinition);
 }
 
 class JSClassRegister
@@ -74,7 +74,7 @@ public:
     void SetClassTypeInfo(const void* TypeId, const NamedFunctionInfo* ConstructorInfos, const NamedFunctionInfo* MethodInfos,
         const NamedFunctionInfo* FunctionInfos, const NamedPropertyInfo* PropertyInfos, const NamedPropertyInfo* VariableInfos);
 
-    void ForeachRegisterClass(std::function<void(const JSClassDefinition* ClassDefinition)>);
+    void ForeachRegisterClass(ClassDefinitionForeachCallback Callback);
 
     const JSClassDefinition* FindClassByID(const void* TypeId);
 
@@ -113,11 +113,11 @@ public:
 
 private:
     eastl::map<const void*, JSClassDefinition*, eastl::less<const void*>, eastl::allocator_malloc> CDataIdToClassDefinition;
-    eastl::map<PString, JSClassDefinition*, eastl::less<PString>, eastl::allocator_malloc> CDataNameToClassDefinition;
+    eastl::map<PString, JSClassDefinition*, eastl::less<PString>, eastl::allocator_malloc> CDataNameToClassDefinition; //需要禁用rtti，否则含析构函数的类会导致对libstdc++/libc++的依赖，尽管没有使用c++的api
     pesapi_class_not_found_callback ClassNotFoundCallback = nullptr;
 #if USING_IN_UNREAL_ENGINE
-    eastl::map<PString, AddonRegisterFunc, eastl::less<const void*>, eastl::allocator_malloc> AddonRegisterInfos;
-    eastl::map<FString, JSClassDefinition*, eastl::less<const void*>, eastl::allocator_malloc> StructNameToClassDefinition;
+    eastl::map<PString, AddonRegisterFunc, eastl::less<PString>, eastl::allocator_malloc> AddonRegisterInfos;
+    eastl::map<FString, JSClassDefinition*, eastl::less<FString>, eastl::allocator_malloc> StructNameToClassDefinition;
 #endif
 };
 
@@ -279,7 +279,7 @@ const JSClassDefinition* JSClassRegister::FindClassByType(UStruct* Type)
 }
 #endif
 
-void JSClassRegister::ForeachRegisterClass(std::function<void(const JSClassDefinition* ClassDefinition)> Callback)
+void JSClassRegister::ForeachRegisterClass(ClassDefinitionForeachCallback Callback)
 {
     for (auto& KV : CDataNameToClassDefinition)
     {
@@ -293,9 +293,11 @@ void JSClassRegister::ForeachRegisterClass(std::function<void(const JSClassDefin
 #endif
 }
 
+// 原来是GetJSClassRegister的静态变量，但这会导致对libstdc++/libc++的依赖，ds说编译器为了保证线程安全自动插入的__cxa_guard_acquire/__cxxabiv1::__guard_test_and_acquire等导致的
+static JSClassRegister S_JSClassRegister;
+
 JSClassRegister* GetJSClassRegister()
 {
-    static JSClassRegister S_JSClassRegister;
     return &S_JSClassRegister;
 }
 
@@ -310,7 +312,7 @@ void SetClassTypeInfo(const void* TypeId, const NamedFunctionInfo* ConstructorIn
     GetJSClassRegister()->SetClassTypeInfo(TypeId, ConstructorInfos, MethodInfos, FunctionInfos, PropertyInfos, VariableInfos);
 }
 
-void ForeachRegisterClass(std::function<void(const JSClassDefinition* ClassDefinition)> Callback)
+void ForeachRegisterClass(ClassDefinitionForeachCallback Callback)
 {
     GetJSClassRegister()->ForeachRegisterClass(Callback);
 }
