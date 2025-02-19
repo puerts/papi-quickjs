@@ -11,6 +11,20 @@ void CppObjectMapper::Initialize(JSContext* ctx_)
 {
     ctx = ctx_;
     JS_SetContextOpaque(ctx, this);
+    new (&CDataCache) eastl::unordered_map<const void*, FObjectCacheNode, eastl::hash<const void*>, 
+            eastl::equal_to<const void*>, eastl::allocator_malloc>();
+    new (&TypeIdToFunctionMap) eastl::unordered_map<const void*, JSValue, eastl::hash<const void*>, 
+            eastl::equal_to<const void*>, eastl::allocator_malloc>();
+}
+
+void CppObjectMapper::Cleanup()
+{
+    if (ctx)
+    {
+        JS_SetContextOpaque(ctx, nullptr);
+    }
+    CDataCache.~hash_map();
+    TypeIdToFunctionMap.~hash_map();
 }
 
 }

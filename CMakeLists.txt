@@ -179,6 +179,19 @@ target_compile_definitions(PapiQjs PUBLIC EA_DEPRECATIONS_FOR_2024_SEPT=EA_DISAB
 target_compile_definitions(PapiQjs PUBLIC EA_DEPRECATIONS_FOR_2025_APRIL=EA_DISABLED)
 #target_compile_definitions(PapiQjs PUBLIC EASTL_DLL)
 target_compile_definitions(PapiQjs PUBLIC USING_REGISTER_API_SHARED)
+target_compile_options(PapiQjs PRIVATE
+    $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:
+        -fno-exceptions
+        -fno-unwind-tables
+        -fno-asynchronous-unwind-tables
+        -fno-rtti
+    >
+    $<$<CXX_COMPILER_ID:MSVC>:
+        /EHa-
+        /EHsc-
+        /GR-  # 禁用RTTI
+    >
+)
 
 target_compile_definitions(PapiRegister PUBLIC BUILD_REGISTER_API_SHARED)
 target_compile_options(PapiRegister PRIVATE

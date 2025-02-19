@@ -14,6 +14,8 @@ namespace qjsimpl
 struct CppObjectMapper
 {
     void Initialize(JSContext* ctx_);
+
+    void Cleanup();
     
     CppObjectMapper(const CppObjectMapper&) = delete;
     CppObjectMapper& operator=(const CppObjectMapper&) = delete;

@@ -60,7 +60,10 @@ public:
     ~FObjectCacheNode()
     {
         if (Next)
-            delete Next;
+        {
+            Next->~FObjectCacheNode();
+            free(Next);
+        }
         JS_FreeValueRT(RT, Value);
     }
 
@@ -87,7 +90,8 @@ public:
                 {
                     auto PreNext = Next;
                     *this = std::move(*Next);
-                    delete PreNext;
+                    PreNext->~FObjectCacheNode();
+                    free(PreNext);
                 }
                 else
                 {
@@ -105,7 +109,8 @@ public:
             {
                 Next = Removed->Next;
                 Removed->Next = nullptr;
-                delete Removed;
+                Removed->~FObjectCacheNode();
+                free(Removed);
             }
             return Removed;
         }
@@ -114,7 +119,9 @@ public:
 
     inline FObjectCacheNode* Add(const void* TypeId_)
     {
-        Next = new FObjectCacheNode(RT, TypeId_, Next);
+        FObjectCacheNode* newNode = static_cast<FObjectCacheNode*>(malloc(sizeof(FObjectCacheNode)));
+        new (newNode) FObjectCacheNode(RT, TypeId_, Next);
+        Next = newNode;
         return Next;
     }
 
