@@ -160,12 +160,17 @@ else ()
         VISIBILITY_INLINES_HIDDEN TRUE
     )
     # 确保生成导入库路径正确
-    set_target_properties(PapiQjs PROPERTIES
-        ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
-        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
-        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
-    )
+    #set_target_properties(PapiQjs PROPERTIES
+    #    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+    #    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+    #    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+    #)
     add_library(PapiRegister SHARED ${eastl_sources} ${papi_register_sources})
+    set_target_properties(PapiRegister PROPERTIES
+        WINDOWS_EXPORT_ALL_SYMBOLS TRUE
+        CXX_VISIBILITY_PRESET hidden
+        VISIBILITY_INLINES_HIDDEN TRUE
+    )
 endif()
 target_compile_definitions(PapiQjs PRIVATE ${qjs_defines})
 target_include_directories(PapiQjs PUBLIC
@@ -189,10 +194,14 @@ target_compile_options(PapiQjs PRIVATE
     >
     $<$<CXX_COMPILER_ID:MSVC>:
         /EHa-
+        /EHsc
         /EHsc-
         /GR-  # 禁用RTTI
     >
 )
+#if(MSVC)
+#target_compile_options(PapiQjs PRIVATE /EHsc)
+#endif()
 
 target_compile_definitions(PapiRegister PUBLIC BUILD_REGISTER_API_SHARED)
 target_compile_options(PapiRegister PRIVATE
@@ -235,6 +244,7 @@ add_executable(papi_qjs_test
 target_link_libraries(papi_qjs_test
     PRIVATE
     PapiQjs
+    PapiRegister
     gtest
     gtest_main
 )
