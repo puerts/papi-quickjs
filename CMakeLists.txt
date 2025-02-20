@@ -154,11 +154,11 @@ else ()
     # 在Windows上需要显式生成导入库
     add_library(PapiQjs SHARED ${qjs_sources} ${eastl_sources} ${papi_sources}) # if add eastl_headers will undefined symbol: __udivti3 __udivmodti4 
     # 设置导出符号
-    set_target_properties(PapiQjs PROPERTIES
-        WINDOWS_EXPORT_ALL_SYMBOLS TRUE
-        CXX_VISIBILITY_PRESET hidden
-        VISIBILITY_INLINES_HIDDEN TRUE
-    )
+    #set_target_properties(PapiQjs PROPERTIES
+    #    WINDOWS_EXPORT_ALL_SYMBOLS TRUE
+    #    CXX_VISIBILITY_PRESET hidden
+    #    VISIBILITY_INLINES_HIDDEN TRUE
+    #)
     # 确保生成导入库路径正确
     #set_target_properties(PapiQjs PROPERTIES
     #    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
@@ -166,11 +166,11 @@ else ()
     #    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
     #)
     add_library(PapiRegister SHARED ${eastl_sources} ${papi_register_sources})
-    set_target_properties(PapiRegister PROPERTIES
-        WINDOWS_EXPORT_ALL_SYMBOLS TRUE
-        CXX_VISIBILITY_PRESET hidden
-        VISIBILITY_INLINES_HIDDEN TRUE
-    )
+    #set_target_properties(PapiRegister PROPERTIES
+    #    WINDOWS_EXPORT_ALL_SYMBOLS TRUE
+    #    CXX_VISIBILITY_PRESET hidden
+    #    VISIBILITY_INLINES_HIDDEN TRUE
+    #)
 endif()
 target_compile_definitions(PapiQjs PRIVATE ${qjs_defines})
 target_include_directories(PapiQjs PUBLIC
@@ -203,7 +203,7 @@ target_compile_options(PapiQjs PRIVATE
 #target_compile_options(PapiQjs PRIVATE /EHsc)
 #endif()
 
-target_compile_definitions(PapiRegister PUBLIC BUILD_REGISTER_API_SHARED)
+target_compile_definitions(PapiRegister PUBLIC BUILDING_REGISTER_API_SHARED)
 target_compile_options(PapiRegister PRIVATE
     $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:
         -fno-exceptions
