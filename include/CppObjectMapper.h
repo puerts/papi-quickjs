@@ -4,6 +4,7 @@
 #include "quickjs.h"
 #include <EASTL/unordered_map.h>
 #include <EASTL/allocator_malloc.h>
+#include <EASTL/shared_ptr.h>
 #include "ObjectCacheNode.h"
 
 namespace pesapi
@@ -20,7 +21,7 @@ struct CppObjectMapper
     CppObjectMapper(const CppObjectMapper&) = delete;
     CppObjectMapper& operator=(const CppObjectMapper&) = delete;
     
-    void* operator new(size_t) = delete;
+    //void* operator new(size_t) = delete;
     void operator delete(void*) = delete;
 
     CppObjectMapper() = default;
@@ -29,7 +30,22 @@ struct CppObjectMapper
     eastl::unordered_map<const void*, FObjectCacheNode, eastl::hash<const void*>, eastl::equal_to<const void*>, eastl::allocator_malloc> CDataCache;
     eastl::unordered_map<const void*, JSValue, eastl::hash<const void*>, eastl::equal_to<const void*>, eastl::allocator_malloc> TypeIdToFunctionMap;
 
+    JSRuntime* rt;
     JSContext* ctx;
+    JSClassID class_id;
+    eastl::shared_ptr<int> Ref = eastl::allocate_shared<int>(eastl::allocator_malloc("shared_ptr"), 0);
+
+    static eastl::weak_ptr<int> GetEnvLifeCycleTracker(JSContext* ctx)
+    {
+        JSRuntime* rt = JS_GetRuntime(ctx);
+        CppObjectMapper* mapper = reinterpret_cast<CppObjectMapper*>(JS_GetRuntimeOpaque(rt));
+        return mapper->GetEnvLifeCycleTracker();
+    }
+
+    eastl::weak_ptr<int> GetEnvLifeCycleTracker()
+    {
+        return eastl::weak_ptr<int>(Ref);
+    }
 };
 
 }  // namespace qjsimpl
@@ -37,3 +53,4 @@ struct CppObjectMapper
 
 
 PESAPI_MODULE_EXPORT pesapi_env_ref create_qjs_env();
+PESAPI_MODULE_EXPORT void destroy_qjs_env(pesapi_env_ref env_ref);

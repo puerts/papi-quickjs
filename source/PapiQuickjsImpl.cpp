@@ -4,6 +4,7 @@
 #include <EASTL/string.h>
 #include <EASTL/vector.h>
 #include <EASTL/allocator_malloc.h>
+#include "CppObjectMapper.h"
 
 void GetPapiQuickjsImpl()
 {
@@ -24,7 +25,7 @@ struct pesapi_env_ref__
     explicit pesapi_env_ref__(JSContext *ctx)
         : context_persistent(JS_DupContext(ctx))
         , ref_count(1)
-        //, env_life_cycle_tracker(puerts::DataTransfer::GetJsEnvLifeCycleTracker(context->GetIsolate()))
+        , env_life_cycle_tracker(pesapi::qjsimpl::CppObjectMapper::GetEnvLifeCycleTracker(ctx))
     {
     }
     

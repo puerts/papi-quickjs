@@ -8,43 +8,26 @@ namespace qjsimpl {
 class CppObjectMapperTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        rt = JS_NewRuntime();
-        ASSERT_NE(rt, nullptr);
-        ctx = JS_NewContext(rt);
-        ASSERT_NE(ctx, nullptr);
-        //mapper = std::make_unique<CppObjectMapper>();
+        env_ref = create_qjs_env();
     }
 
     void TearDown() override {
-        //mapper.reset();
-        JS_FreeContext(ctx);
-        JS_FreeRuntime(rt);
+        if (env_ref) {
+            destroy_qjs_env(env_ref);
+        }
     }
 
-    JSRuntime* rt;
-    JSContext* ctx;
-    //std::unique_ptr<CppObjectMapper> mapper;
+    pesapi_env_ref env_ref;
 };
 
-TEST_F(CppObjectMapperTest, InitializeShouldSetContext) {
-    // 测试正常初始化
-    //EXPECT_NO_THROW(mapper->Initialize(ctx));
-    
-    // 验证上下文是否被正确设置
-    // 这里假设CppObjectMapper有GetContext方法用于测试验证
-    // EXPECT_EQ(mapper->GetContext(), ctx);
+TEST_F(CppObjectMapperTest, CreateAndDestroyMultQjsEnv) {
+    //多次调用create_qjs_env和destroy_qjs_env
+    for (int i = 0; i < 10; i++) {
+        pesapi_env_ref env_ref = create_qjs_env();
+        destroy_qjs_env(env_ref);
+    }
 }
 
-TEST_F(CppObjectMapperTest, InitializeWithNullContextShouldHandleGracefully) {
-    // 测试空指针处理
-    //EXPECT_NO_THROW(mapper->Initialize(nullptr));
-}
-
-TEST_F(CppObjectMapperTest, DoubleInitializationShouldBeSafe) {
-    // 测试重复初始化
-    //EXPECT_NO_THROW(mapper->Initialize(ctx));
-    //EXPECT_NO_THROW(mapper->Initialize(ctx));
-}
 
 } // namespace qjsimpl
 } // namespace pesapi
