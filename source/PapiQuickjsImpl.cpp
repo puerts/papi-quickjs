@@ -21,21 +21,21 @@ enum
 
 struct pesapi_env_ref__
 {
-    JSContext *context_persistent;
-    int ref_count;
-    eastl::weak_ptr<int> env_life_cycle_tracker;
-
-    void init(JSContext *ctx)
+    explicit pesapi_env_ref__(JSContext *ctx)
+        : context_persistent(JS_DupContext(ctx))
+        , ref_count(1)
+        //, env_life_cycle_tracker(puerts::DataTransfer::GetJsEnvLifeCycleTracker(context->GetIsolate()))
     {
-        context_persistent = JS_DupContext(ctx);
-        ref_count = 1;
-        // TODO: env_life_cycle_tracker init;
     }
-
-    void cleanup()
+    
+    ~pesapi_env_ref__()
     {
         JS_FreeContext(context_persistent);
     }
+
+    JSContext *context_persistent;
+    int ref_count;
+    eastl::weak_ptr<int> env_life_cycle_tracker;
 };
 
 struct pesapi_value__ {
@@ -48,22 +48,19 @@ struct pesapi_value__ {
 
 struct pesapi_value_ref__ : pesapi_env_ref__
 {
+    explicit pesapi_value_ref__(JSContext *ctx, JSValue v, uint32_t field_count)
+        : pesapi_env_ref__(ctx), value_persistent(JS_DupValue(ctx, v)), internal_field_count(field_count)
+    {
+    }
+    
+    ~pesapi_value_ref__()
+    {
+        JS_FreeValue(context_persistent, value_persistent);
+    }
+
     JSValue value_persistent;
     uint32_t internal_field_count;
     void* internal_fields[0];
-
-    void init(JSContext *ctx, JSValue v, uint32_t field_count)
-    {
-        pesapi_env_ref__::init(ctx);
-        value_persistent = JS_DupValue(ctx, v);
-        internal_field_count = field_count;
-    }
-
-    void cleanup()
-    {
-        JS_FreeValue(context_persistent, value_persistent);
-        pesapi_env_ref__::cleanup();
-    }
 };
 
 namespace pesapi
@@ -601,7 +598,7 @@ pesapi_env_ref pesapi_create_env_ref(pesapi_env env)
     auto ctx = qjsContextFromPesapiEnv(env);
     auto ret = (pesapi_env_ref)malloc(sizeof(pesapi_env_ref__));
     memset(ret, 0, sizeof(pesapi_env_ref__));
-    ret->init(ctx);
+    new (ret) pesapi_env_ref__(ctx);
     return ret;
 }
 
@@ -631,7 +628,7 @@ void pesapi_release_env_ref(pesapi_env_ref env_ref)
     {
         if (!env_ref->env_life_cycle_tracker.expired())
         {
-            env_ref->cleanup();
+            env_ref->~pesapi_env_ref__();
         }
         free(env_ref);
     }
@@ -690,7 +687,7 @@ void pesapi_release_value_ref(pesapi_value_ref value_ref)
     {
         if (!value_ref->env_life_cycle_tracker.expired())
         {
-            value_ref->cleanup();
+            value_ref->~pesapi_value_ref__();
         }
         free(value_ref);
     }
