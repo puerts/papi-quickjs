@@ -227,24 +227,24 @@ enable_testing()
 include(GoogleTest)
 
 
-add_executable(cpp_object_mapper_test 
-    test/CppObjectMapperTest.cpp
+add_executable(papi_qjs_test 
+    test/papi_qjs_base_test.cpp
 )
 
-target_link_libraries(cpp_object_mapper_test
+target_link_libraries(papi_qjs_test
     PRIVATE
     PapiQjs
     gtest
     gtest_main
 )
 
-target_include_directories(cpp_object_mapper_test PRIVATE
+target_include_directories(papi_qjs_test PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/source
     ${CMAKE_CURRENT_SOURCE_DIR}/quickjs
     ${googletest_SOURCE_DIR}/googletest/include
 )
 
-gtest_discover_tests(cpp_object_mapper_test)
+gtest_discover_tests(papi_qjs_test)
 
 endif()
