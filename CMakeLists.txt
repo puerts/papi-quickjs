@@ -144,6 +144,7 @@ endif()
 
 set(papi_register_sources
     papi-register/source/JSClassRegister.cpp
+    papi-register/source/RapiImpl.cpp
 )
 
 if ( APPLE AND IOS )
