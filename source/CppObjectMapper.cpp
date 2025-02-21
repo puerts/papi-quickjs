@@ -25,9 +25,9 @@ void PApiFuncFinalizer(JSRuntime* rt, JSValue val)
 JSValue CppObjectMapper::CreateFunction(pesapi_callback Callback, void* Data, pesapi_function_finalize Finalize)
 {
     JSValue func_data[3] {
-        JS_MKPTR(JS_TAG_EXTERNAL, Callback), 
+        JS_MKPTR(JS_TAG_EXTERNAL, (void*)Callback), 
         JS_MKPTR(JS_TAG_EXTERNAL, Data), 
-        JS_MKPTR(JS_TAG_EXTERNAL, Finalize)
+        JS_MKPTR(JS_TAG_EXTERNAL, (void*)Finalize)
         };
 
     JSValue func = JS_NewCFunctionData(ctx, [](JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, int magic, JSValue *func_data) -> JSValue {
