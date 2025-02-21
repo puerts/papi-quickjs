@@ -186,7 +186,10 @@ pesapi_value pesapi_create_object(pesapi_env env)
 
 pesapi_value pesapi_create_function(pesapi_env env, pesapi_callback native_impl, void* data, pesapi_function_finalize finalize)
 {
-    return {};
+    auto ctx = qjsContextFromPesapiEnv(env);
+    auto ret = allocValueInCurrentScope(ctx);
+    *ret = pesapi::qjsimpl::CppObjectMapper::Get(ctx)->CreateFunction(native_impl, data, finalize);
+    return pesapiValueFromQjsValue(ret);
 }
 
 pesapi_value pesapi_create_class(pesapi_env env, const void* type_id)
@@ -418,7 +421,14 @@ int pesapi_get_args_len(pesapi_callback_info pinfo)
 
 pesapi_value pesapi_get_arg(pesapi_callback_info pinfo, int index)
 {
-    return pesapiValueFromQjsValue(&(pinfo->argv[index]));
+    if (index >= 0 && index < pinfo->argc)
+    {
+        return pesapiValueFromQjsValue(&(pinfo->argv[index]));
+    }
+    else
+    {
+        return pesapiValueFromQjsValue(&literal_values_undefined);
+    }
 }
 
 PESAPI_EXTERN pesapi_env pesapi_get_env(pesapi_callback_info pinfo)
@@ -621,6 +631,10 @@ pesapi_value pesapi_get_property(pesapi_env env, pesapi_value pobject, const cha
 
 void pesapi_set_property(pesapi_env env, pesapi_value pobject, const char* key, pesapi_value pvalue)
 {
+    auto ctx = qjsContextFromPesapiEnv(env);
+    JSValue* obj = qjsValueFromPesapiValue(pobject);
+    JSValue* val = qjsValueFromPesapiValue(pvalue);
+    JS_SetPropertyStr(ctx, *obj, key, *val);
 }
 
 bool pesapi_get_private(pesapi_env env, pesapi_value pobject, void** out_ptr)
@@ -667,7 +681,10 @@ pesapi_value pesapi_eval(pesapi_env env, const uint8_t* code, size_t code_size, 
 
 pesapi_value pesapi_global(pesapi_env env)
 {
-    return {};
+    auto ctx = qjsContextFromPesapiEnv(env);
+    auto ret = allocValueInCurrentScope(ctx);
+    *ret = JS_GetGlobalObject(ctx);
+    return pesapiValueFromQjsValue(ret);
 }
 
 const void* pesapi_get_env_private(pesapi_env env)

@@ -32,7 +32,7 @@ JSValue CppObjectMapper::CreateFunction(pesapi_callback Callback, void* Data, pe
 
     JSValue func = JS_NewCFunctionData(ctx, [](JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, int magic, JSValue *func_data) -> JSValue {
         pesapi_callback callback = (pesapi_callback)(JS_VALUE_GET_PTR(func_data[0]));
-        pesapi_callback_info__ callbackInfo  { ctx, this_val, argc, argv, JS_VALUE_GET_PTR(func_data[0]), JS_UNDEFINED, JS_UNDEFINED };
+        pesapi_callback_info__ callbackInfo  { ctx, this_val, argc, argv, JS_VALUE_GET_PTR(func_data[1]), JS_UNDEFINED, JS_UNDEFINED };
 
         callback(&g_pesapi_ffi, &callbackInfo);
         if (JS_IsException(callbackInfo.res))

@@ -13,6 +13,20 @@ public:
     {
 
     }
+
+    static void Bar(struct pesapi_ffi* apis, pesapi_callback_info info)
+    {
+        auto env = apis->get_env(info);
+        PApiBaseTest* self = (PApiBaseTest*)apis->get_userdata(info);
+        auto arg0 = apis->get_arg(info, 0);
+        if (apis->is_int32(env, arg0))
+        {
+            self->bar_data = apis->get_value_int32(env, arg0);
+        }
+    }
+
+    int bar_data = 0;
+
 protected:
     void SetUp() override {
         env_ref = create_qjs_env();
@@ -73,8 +87,38 @@ TEST_F(PApiBaseTest, EvalJavaScriptEx) {
 
     EXPECT_STREQ("Error: abc", api->get_exception_as_string(scope, false));
     EXPECT_STREQ("Error: abc\n    at <anonymous> (test.js:1:21)\n    at <eval> (test.js:1:42)\n", api->get_exception_as_string(scope, true));
-    //printf("%s\n", api->get_exception_as_string(scope, false));
-    //printf("%s\n", api->get_exception_as_string(scope, true));
+
+    api->close_scope(scope);
+}
+
+TEST_F(PApiBaseTest, SetToGlobal) {
+    auto scope = api->open_scope(env_ref);
+    auto env = api->get_env_from_ref(env_ref);
+
+    auto g = api->global(env);
+    api->set_property(env, g, "SetToGlobal", api->create_int32(env, 123));
+
+    auto code = " SetToGlobal;";
+    auto ret = api->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
+    ASSERT_TRUE(ret != nullptr);
+    ASSERT_TRUE(api->is_int32(env, ret));
+    ASSERT_TRUE(api->get_value_int32(env, ret) == 123);
+
+    api->close_scope(scope);
+}
+
+
+TEST_F(PApiBaseTest, CreateJsFunction) {
+    auto scope = api->open_scope(env_ref);
+    auto env = api->get_env_from_ref(env_ref);
+
+    auto g = api->global(env);
+    api->set_property(env, g, "Bar__", api->create_function(env, Bar, this, nullptr));
+    auto code = "Bar__(3344);";
+    bar_data = 100;
+    auto ret = api->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
+    ASSERT_FALSE(api->has_caught(scope));
+    EXPECT_EQ(bar_data, 3344);
 
     api->close_scope(scope);
 }
