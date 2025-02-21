@@ -641,8 +641,8 @@ pesapi_scope pesapi_open_scope(pesapi_env_ref env_ref)
     {
         return nullptr;
     }
-    pesapi_scope ret = static_cast<pesapi_scope>(malloc(sizeof(pesapi_scope)));
-    memset(ret, 0, sizeof(pesapi_scope));
+    pesapi_scope ret = static_cast<pesapi_scope>(malloc(sizeof(pesapi_scope__)));
+    memset(ret, 0, sizeof(pesapi_scope__));
     new (ret) pesapi_scope__(env_ref->context_persistent);
     return nullptr;
 }

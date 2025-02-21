@@ -7,7 +7,7 @@
 namespace pesapi {
 namespace qjsimpl {
 
-class CppObjectMapperTest : public ::testing::Test {
+class PApiBaseTest : public ::testing::Test {
 public:
     static void Foo(struct pesapi_ffi* apis, pesapi_callback_info info)
     {
@@ -29,7 +29,7 @@ protected:
     struct pesapi_ffi* api;
 };
 
-TEST_F(CppObjectMapperTest, CreateAndDestroyMultQjsEnv) {
+TEST_F(PApiBaseTest, CreateAndDestroyMultQjsEnv) {
     //多次调用create_qjs_env和destroy_qjs_env
     for (int i = 0; i < 10; i++) {
         pesapi_env_ref env_ref = create_qjs_env();
@@ -37,7 +37,7 @@ TEST_F(CppObjectMapperTest, CreateAndDestroyMultQjsEnv) {
     }
 }
 
-TEST_F(CppObjectMapperTest, RegApi) {
+TEST_F(PApiBaseTest, RegApi) {
     pesapi_property_descriptor properties = pesapi_alloc_property_descriptors(1);
     pesapi_set_method_info(properties, 0, "Foo", true, Foo, NULL, NULL);
     pesapi_define_class("Test", NULL, "Test", NULL, NULL, 1, properties, NULL);
@@ -50,7 +50,7 @@ TEST_F(CppObjectMapperTest, RegApi) {
     ASSERT_TRUE(clsDef->Functions[0].Callback == Foo);
 }
 
-TEST_F(CppObjectMapperTest, EvalJavaScript) {
+TEST_F(PApiBaseTest, EvalJavaScript) {
     auto scope = api->open_scope(env_ref);
     auto env = api->get_env_from_ref(env_ref);
 
