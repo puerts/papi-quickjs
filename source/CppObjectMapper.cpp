@@ -5,7 +5,6 @@ namespace pesapi
 {
 namespace qjsimpl
 {
-extern pesapi_ffi g_pesapi_ffi;
 
 void PApiObjectFinalizer(JSRuntime* rt, JSValue val)
 {
@@ -48,6 +47,8 @@ void CppObjectMapper::Cleanup()
 }
 }
 
+// ----------------begin test interface----------------
+
 pesapi_env_ref create_qjs_env()
 {
     JSRuntime* rt = JS_NewRuntime();
@@ -78,3 +79,5 @@ void destroy_qjs_env(pesapi_env_ref env_ref)
         free(mapper);
     }
 }
+
+// ----------------end test interface----------------
