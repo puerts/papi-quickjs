@@ -23,6 +23,7 @@ jobs:
         cd $GITHUB_WORKSPACE
         chmod +x make_osx.sh
         sh ./make_osx.sh
+        ./bulid/papi_qjs_test
         
   build_ios:
     name: iOS
@@ -85,6 +86,7 @@ jobs:
         cd $GITHUB_WORKSPACE
         chmod +x make_linux64.sh
         ./make_linux64.sh
+        ./build_linux64/papi_qjs_test
         
   build_wasm:
     name: wasm 
@@ -114,5 +116,6 @@ jobs:
     - name: Build
       run: |
         .\make_win64.bat
+        .\build\Release\papi_qjs_test.exe
 
 
