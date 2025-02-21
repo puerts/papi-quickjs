@@ -72,6 +72,7 @@ TEST_F(PApiBaseTest, EvalJavaScriptEx) {
     ASSERT_TRUE(api->has_caught(scope));
 
     EXPECT_STREQ("Error: abc", api->get_exception_as_string(scope, false));
+    EXPECT_STREQ("Error: abc\n    at <anonymous> (test.js:1:21)\n    at <eval> (test.js:1:42)\n", api->get_exception_as_string(scope, true));
     //printf("%s\n", api->get_exception_as_string(scope, false));
     //printf("%s\n", api->get_exception_as_string(scope, true));
 
