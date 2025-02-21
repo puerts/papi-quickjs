@@ -78,6 +78,13 @@ static void setCurrentScope(JSContext *ctx, struct pesapi_scope__ *scope)
 {
 	JS_SetContextOpaque(ctx, scope);
 }
+
+struct caught_exception_info
+{
+    JSValue exception = JS_UNDEFINED;
+    eastl::basic_string<char, eastl::allocator_malloc> message;
+};
+
 }
 }
 
@@ -90,11 +97,8 @@ struct pesapi_scope__
 		this->ctx = ctx;
 		prev_scope = pesapi::qjsimpl::getCurrentScope(ctx);
 		pesapi::qjsimpl::setCurrentScope(ctx, this);
-
 		values_used = 0;
-
-		exception = JS_UNDEFINED;
-        hasCaught = false;
+		caught = nullptr;
 	}
 
 	JSContext *ctx;
@@ -105,11 +109,9 @@ struct pesapi_scope__
 
 	uint32_t values_used;
 
-    bool hasCaught;
-
 	eastl::vector<JSValue*, eastl::allocator_malloc> dynamic_alloc_values;
 
-	JSValue exception;
+	pesapi::qjsimpl::caught_exception_info* caught;
 
 	JSValue *allocValue()
 	{
@@ -127,10 +129,26 @@ struct pesapi_scope__
 		return ret;
 	}
 
+    void setCaughtException(JSValue exception)
+    {
+        if (caught == nullptr)
+        {
+            caught = (pesapi::qjsimpl::caught_exception_info *) js_malloc(ctx, sizeof(pesapi::qjsimpl::caught_exception_info));
+            memset(caught, 0, sizeof(pesapi::qjsimpl::caught_exception_info));
+            new (caught) pesapi::qjsimpl::caught_exception_info();
+        }
+        caught->exception = exception;
+    }
+
 
 	~pesapi_scope__()
 	{
-		JS_FreeValue(ctx, exception);
+        if (caught)
+        {
+		    JS_FreeValue(ctx, caught->exception);
+            caught->~caught_exception_info();
+            js_free(ctx, caught);
+        }
 		for (size_t i = 0; i < values_used; i++)
 		{
 			JS_FreeValue(ctx, values[i]);
@@ -663,13 +681,24 @@ pesapi_scope pesapi_open_scope_placement(pesapi_env_ref env_ref, struct pesapi_s
 
 bool pesapi_has_caught(pesapi_scope scope)
 {
-    return scope->hasCaught;
+    return scope->caught != nullptr;
 }
 
 const char* pesapi_get_exception_as_string(pesapi_scope scope, bool with_stack)
 {
-    if (scope->hasCaught)
+    if (scope->caught != nullptr)
     {
+        auto ctx = scope->ctx;
+        auto msg = JS_ToCString(ctx, scope->caught->exception);
+        scope->caught->message = msg;
+        JS_FreeCString(ctx, msg);
+
+        if (with_stack)
+        {
+            //JSValue fileNameVal = JS_GetProperty(ctx, scope->caught->exception, JS_ATOM_fileName);
+            //JSValue lineNumVal = JS_GetProperty(ctx, scope->caught->exception, JS_ATOM_lineNumber);
+        }
+        return scope->caught->message.c_str();
     }
     return nullptr;
 }
@@ -781,8 +810,7 @@ pesapi_value pesapi_eval(pesapi_env env, const uint8_t* code, size_t code_size, 
     JSValue retOrEx = JS_Eval(ctx, (const char *)code, code_size, path, JS_EVAL_TYPE_GLOBAL);
     if (JS_IsException(retOrEx)) {
         auto scope = getCurrentScope(ctx);
-        scope->hasCaught = true;
-        scope->exception = JS_GetException(ctx);
+        scope->setCaughtException(JS_GetException(ctx));
 
         return pesapi_create_undefined(env);
     } else {

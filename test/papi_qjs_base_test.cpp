@@ -67,9 +67,13 @@ TEST_F(PApiBaseTest, EvalJavaScriptEx) {
     auto scope = api->open_scope(env_ref);
     auto env = api->get_env_from_ref(env_ref);
 
-    auto code = " function() { return 123 / 0; } ();";
+    auto code = " (function() { throw new Error('abc'); }) ();";
     auto ret = api->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
     ASSERT_TRUE(api->has_caught(scope));
+
+    EXPECT_STREQ("Error: abc", api->get_exception_as_string(scope, false));
+    //printf("%s\n", api->get_exception_as_string(scope, false));
+    //printf("%s\n", api->get_exception_as_string(scope, true));
 
     api->close_scope(scope);
 }
