@@ -14,6 +14,11 @@ namespace qjsimpl
 
 struct CppObjectMapper
 {
+    inline static CppObjectMapper* Get(JSContext* ctx)
+    {
+        return reinterpret_cast<CppObjectMapper*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
+    }
+
     void Initialize(JSContext* ctx_);
 
     void Cleanup();
@@ -33,6 +38,7 @@ struct CppObjectMapper
     JSRuntime* rt;
     JSContext* ctx;
     JSClassID class_id;
+    JSClassID func_tracer_class_id;
     eastl::shared_ptr<int> Ref = eastl::allocate_shared<int>(eastl::allocator_malloc("shared_ptr"), 0);
 
     static eastl::weak_ptr<int> GetEnvLifeCycleTracker(JSContext* ctx)
@@ -46,6 +52,8 @@ struct CppObjectMapper
     {
         return eastl::weak_ptr<int>(Ref);
     }
+
+    JSValue CreateFunction(pesapi_callback Callback, void* Data, pesapi_function_finalize Finalize);
 };
 
 }  // namespace qjsimpl

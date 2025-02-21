@@ -1,5 +1,8 @@
 #include "CppObjectMapper.h"
 #include "pesapi.h"
+#include "PapiData.h"
+
+#define JS_TAG_EXTERNAL (JS_TAG_FLOAT64 + 1)
 
 namespace pesapi
 {
@@ -11,6 +14,38 @@ void PApiObjectFinalizer(JSRuntime* rt, JSValue val)
 {
     CppObjectMapper* mapper = reinterpret_cast<CppObjectMapper*>(JS_GetRuntimeOpaque(rt));
     JS_GetOpaque(val, mapper->class_id);
+}
+
+void PApiFuncFinalizer(JSRuntime* rt, JSValue val)
+{
+    CppObjectMapper* mapper = reinterpret_cast<CppObjectMapper*>(JS_GetRuntimeOpaque(rt));
+    JS_GetOpaque(val, mapper->func_tracer_class_id);
+}
+
+JSValue CppObjectMapper::CreateFunction(pesapi_callback Callback, void* Data, pesapi_function_finalize Finalize)
+{
+    JSValue func_data[3] {
+        JS_MKPTR(JS_TAG_EXTERNAL, Callback), 
+        JS_MKPTR(JS_TAG_EXTERNAL, Data), 
+        JS_MKPTR(JS_TAG_EXTERNAL, Finalize)
+        };
+
+    JSValue func = JS_NewCFunctionData(ctx, [](JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, int magic, JSValue *func_data) -> JSValue {
+        pesapi_callback callback = (pesapi_callback)(JS_VALUE_GET_PTR(func_data[0]));
+        pesapi_callback_info__ callbackInfo  { ctx, this_val, argc, argv, JS_VALUE_GET_PTR(func_data[0]), JS_UNDEFINED, JS_UNDEFINED };
+
+        callback(&g_pesapi_ffi, &callbackInfo);
+        if (JS_IsException(callbackInfo.res))
+        {
+            return JS_Throw(ctx, callbackInfo.ex);
+        }
+        else
+        {
+            return callbackInfo.res;
+        }
+    }, 0, 0, 3, &func_data[0]);
+
+    return func;
 }
 
 void CppObjectMapper::Initialize(JSContext* ctx_)
@@ -33,6 +68,18 @@ void CppObjectMapper::Initialize(JSContext* ctx_)
     class_id = 0;
     JS_NewClassID(rt, &class_id);
     JS_NewClass(rt, class_id, &cls_def);
+
+
+    JSClassDef func_tracer_cls_def;
+    func_tracer_cls_def.class_name = "__papi_func_tracer";
+    func_tracer_cls_def.finalizer = PApiFuncFinalizer;
+    func_tracer_cls_def.exotic = NULL;
+    func_tracer_cls_def.gc_mark = NULL;
+    func_tracer_cls_def.call = NULL;
+
+    func_tracer_class_id = 0;
+    JS_NewClassID(rt, &func_tracer_class_id);
+    JS_NewClass(rt, func_tracer_class_id, &func_tracer_cls_def);
 }
 
 void CppObjectMapper::Cleanup()
