@@ -12,8 +12,6 @@ namespace pesapi
 namespace qjsimpl
 {
 
-extern pesapi_ffi g_pesapi_ffi;
-
 struct CppObjectMapper
 {
     void Initialize(JSContext* ctx_);
@@ -56,4 +54,5 @@ struct CppObjectMapper
 // ----------------begin test interface----------------
 PESAPI_MODULE_EXPORT pesapi_env_ref create_qjs_env();
 PESAPI_MODULE_EXPORT void destroy_qjs_env(pesapi_env_ref env_ref);
+PESAPI_MODULE_EXPORT struct pesapi_ffi* get_papi_ffi();
 // ----------------end test interface----------------

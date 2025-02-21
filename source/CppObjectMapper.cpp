@@ -5,6 +5,7 @@ namespace pesapi
 {
 namespace qjsimpl
 {
+extern pesapi_ffi g_pesapi_ffi;
 
 void PApiObjectFinalizer(JSRuntime* rt, JSValue val)
 {
@@ -78,6 +79,11 @@ void destroy_qjs_env(pesapi_env_ref env_ref)
         mapper->~CppObjectMapper();
         free(mapper);
     }
+}
+
+struct pesapi_ffi* get_papi_ffi()
+{
+    return &pesapi::qjsimpl::g_pesapi_ffi;
 }
 
 // ----------------end test interface----------------

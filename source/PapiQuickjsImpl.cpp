@@ -641,6 +641,9 @@ pesapi_scope pesapi_open_scope(pesapi_env_ref env_ref)
     {
         return nullptr;
     }
+    pesapi_scope ret = static_cast<pesapi_scope>(malloc(sizeof(pesapi_scope)));
+    memset(ret, 0, sizeof(pesapi_scope));
+    new (ret) pesapi_scope__(env_ref->context_persistent);
     return nullptr;
 }
 
@@ -650,7 +653,9 @@ pesapi_scope pesapi_open_scope_placement(pesapi_env_ref env_ref, struct pesapi_s
     {
         return nullptr;
     }
-    return nullptr;
+    memset(memory, 0, sizeof(struct pesapi_scope_memory));
+    new (memory) pesapi_scope__(env_ref->context_persistent);
+    return reinterpret_cast<pesapi_scope>(memory);
 }
 
 bool pesapi_has_caught(pesapi_scope scope)
@@ -665,10 +670,21 @@ const char* pesapi_get_exception_as_string(pesapi_scope scope, bool with_stack)
 
 void pesapi_close_scope(pesapi_scope scope)
 {
+    if (!scope)
+    {
+        return;
+    }
+    scope->~pesapi_scope__();
+    free(scope);
 }
 
 void pesapi_close_scope_placement(pesapi_scope scope)
 {
+    if (!scope)
+    {
+        return;
+    }
+    scope->~pesapi_scope__();
 }
 
 pesapi_value_ref pesapi_create_value_ref(pesapi_env env, pesapi_value pvalue, uint32_t internal_field_count)
@@ -753,7 +769,20 @@ pesapi_value pesapi_call_function(pesapi_env env, pesapi_value pfunc, pesapi_val
 
 pesapi_value pesapi_eval(pesapi_env env, const uint8_t* code, size_t code_size, const char* path)
 {
-    return {};
+    auto ctx = qjsContextFromPesapiEnv(env);
+    auto rt = JS_GetRuntime(ctx);
+    JS_UpdateStackTop(rt);
+    JSValue retOrEx = JS_Eval(ctx, (const char *)code, code_size, path, JS_EVAL_TYPE_GLOBAL);
+    if (JS_IsException(retOrEx)) {
+        auto scope = getCurrentScope(ctx);
+        scope->exception = JS_GetException(ctx);
+
+        return pesapi_create_undefined(env);
+    } else {
+        auto ret = allocValueInCurrentScope(ctx);
+        *ret = retOrEx;
+        return pesapiValueFromQjsValue(ret);
+    }
 }
 
 pesapi_value pesapi_global(pesapi_env env)
