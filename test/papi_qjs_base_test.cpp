@@ -63,6 +63,17 @@ TEST_F(PApiBaseTest, EvalJavaScript) {
     api->close_scope(scope);
 }
 
+TEST_F(PApiBaseTest, EvalJavaScriptEx) {
+    auto scope = api->open_scope(env_ref);
+    auto env = api->get_env_from_ref(env_ref);
+
+    auto code = " function() { return 123 / 0; } ();";
+    auto ret = api->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
+    ASSERT_TRUE(api->has_caught(scope));
+
+    api->close_scope(scope);
+}
+
 
 } // namespace qjsimpl
 } // namespace pesapi

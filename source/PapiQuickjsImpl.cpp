@@ -93,7 +93,8 @@ struct pesapi_scope__
 
 		values_used = 0;
 
-		exception = JS_NULL;
+		exception = JS_UNDEFINED;
+        hasCaught = false;
 	}
 
 	JSContext *ctx;
@@ -102,7 +103,9 @@ struct pesapi_scope__
 
 	JSValue values[SCOPE_FIX_SIZE_VALUES_SIZE];
 
-	size_t values_used;
+	uint32_t values_used;
+
+    bool hasCaught;
 
 	eastl::vector<JSValue*, eastl::allocator_malloc> dynamic_alloc_values;
 
@@ -644,7 +647,7 @@ pesapi_scope pesapi_open_scope(pesapi_env_ref env_ref)
     pesapi_scope ret = static_cast<pesapi_scope>(malloc(sizeof(pesapi_scope__)));
     memset(ret, 0, sizeof(pesapi_scope__));
     new (ret) pesapi_scope__(env_ref->context_persistent);
-    return nullptr;
+    return ret;
 }
 
 pesapi_scope pesapi_open_scope_placement(pesapi_env_ref env_ref, struct pesapi_scope_memory* memory)
@@ -660,12 +663,15 @@ pesapi_scope pesapi_open_scope_placement(pesapi_env_ref env_ref, struct pesapi_s
 
 bool pesapi_has_caught(pesapi_scope scope)
 {
-    return false;
+    return scope->hasCaught;
 }
 
 const char* pesapi_get_exception_as_string(pesapi_scope scope, bool with_stack)
 {
-    return nullptr;;
+    if (scope->hasCaught)
+    {
+    }
+    return nullptr;
 }
 
 void pesapi_close_scope(pesapi_scope scope)
@@ -775,6 +781,7 @@ pesapi_value pesapi_eval(pesapi_env env, const uint8_t* code, size_t code_size, 
     JSValue retOrEx = JS_Eval(ctx, (const char *)code, code_size, path, JS_EVAL_TYPE_GLOBAL);
     if (JS_IsException(retOrEx)) {
         auto scope = getCurrentScope(ctx);
+        scope->hasCaught = true;
         scope->exception = JS_GetException(ctx);
 
         return pesapi_create_undefined(env);
