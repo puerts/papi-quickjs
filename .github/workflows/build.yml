@@ -23,7 +23,7 @@ jobs:
         cd $GITHUB_WORKSPACE
         chmod +x make_osx.sh
         sh ./make_osx.sh
-        ./bulid/papi_qjs_test
+        ./build/Release/papi_qjs_test
         
   build_ios:
     name: iOS
