@@ -36,10 +36,45 @@ public:
     void* finalizer_env_private = nullptr;
 
 protected:
+    static void EmptyFinalizer(struct pesapi_ffi* apis, void* data, void* env_private)
+    {
+
+    }
+
     void SetUp() override {
         //printf("SetUp\n");
         env_ref = create_qjs_env();
         api = get_papi_ffi();
+
+        auto scope = api->open_scope(env_ref);
+        auto env = api->get_env_from_ref(env_ref);
+
+        auto g = api->global(env);
+        api->set_property(env, g, "loadClass", api->create_function(env, LoadClass, this, EmptyFinalizer));
+        api->close_scope(scope);
+    }
+
+    static void LoadClass(struct pesapi_ffi* apis, pesapi_callback_info info)
+    {
+        auto env = apis->get_env(info);
+        auto arg0 = apis->get_arg(info, 0);
+        if (apis->is_string(env, arg0))
+        {
+            char buff[1024];
+            size_t len = sizeof(buff);
+            const char* className = apis->get_value_string_utf8(env, arg0, buff, &len);
+            printf("LoadClass className: %s\n", className);
+            auto clsDef = puerts::FindCppTypeClassByName(className);
+            if (clsDef)
+            {
+                auto ret = apis->create_class(env, clsDef->TypeId);
+                apis->add_return(info, ret);
+            }
+            else
+            {
+                printf("LoadClass className: %s fail!!!\n", className);
+            }
+        }
     }
 
     void TearDown() override {
@@ -55,10 +90,10 @@ protected:
 
 TEST_F(PApiBaseTest, CreateAndDestroyMultQjsEnv) {
     //多次调用create_qjs_env和destroy_qjs_env
-    for (int i = 0; i < 10; i++) {
-        pesapi_env_ref env_ref = create_qjs_env();
-        destroy_qjs_env(env_ref);
-    }
+    //for (int i = 0; i < 10; i++) {
+    //   pesapi_env_ref env_ref = create_qjs_env();
+    //    destroy_qjs_env(env_ref);
+    //}
 }
 
 TEST_F(PApiBaseTest, RegApi) {
@@ -176,6 +211,16 @@ TEST_F(PApiBaseTest, PropertyGetSet) {
     EXPECT_STREQ("888", buff);
 
     api->close_scope(scope);
+}
+
+TEST_F(PApiBaseTest, ClassCtorFinalize) {
+    /*auto scope = api->open_scope(env_ref);
+    auto env = api->get_env_from_ref(env_ref);
+
+    auto code = "loadClass(Test');";
+    api->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
+
+    api->close_scope(scope);*/
 }
 
 

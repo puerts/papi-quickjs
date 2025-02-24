@@ -6,6 +6,7 @@
 #include <EASTL/allocator_malloc.h>
 #include <EASTL/shared_ptr.h>
 #include "ObjectCacheNode.h"
+#include "JSClassRegister.h"
 
 namespace pesapi
 {
@@ -65,6 +66,16 @@ struct CppObjectMapper
     }
 
     JSValue CreateFunction(pesapi_callback Callback, void* Data, pesapi_function_finalize Finalize);
+
+    JSValue CreateClassByID(const void* typeId);
+
+    static JSValue CreateError(JSContext* ctx, const char* message);
+
+    JSValue CreateClass(const puerts::JSClassDefinition* ClassDefinition);
+
+    void AddToCache(const puerts::JSClassDefinition* typeInfo, const void* ptr, JSValue value, bool callFinalize);
+
+    void RemoveFromCache(const puerts::JSClassDefinition* typeInfo, const void* ptr);
 };
 
 }  // namespace qjsimpl

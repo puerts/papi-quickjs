@@ -189,13 +189,15 @@ pesapi_value pesapi_create_function(pesapi_env env, pesapi_callback native_impl,
     auto ctx = qjsContextFromPesapiEnv(env);
     auto ret = allocValueInCurrentScope(ctx);
     *ret = pesapi::qjsimpl::CppObjectMapper::Get(ctx)->CreateFunction(native_impl, data, finalize);
-    //JS_DupValue(ctx, *ret);
     return pesapiValueFromQjsValue(ret);
 }
 
 pesapi_value pesapi_create_class(pesapi_env env, const void* type_id)
 {
-    return {};
+    auto ctx = qjsContextFromPesapiEnv(env);
+    auto ret = allocValueInCurrentScope(ctx);
+    *ret = pesapi::qjsimpl::CppObjectMapper::Get(ctx)->CreateClassByID(type_id);
+    return pesapiValueFromQjsValue(ret);
 }
 
 int JS_ToBool2(JSContext *ctx, bool *pres, JSValue val)

@@ -18,7 +18,7 @@ namespace qjsimpl
 class FObjectCacheNode
 {
 public:
-    inline FObjectCacheNode(JSRuntime* RT_, void* TypeId_) : RT(RT_), TypeId(TypeId_), UserData(nullptr), Next(nullptr), MustCallFinalize(false)
+    inline FObjectCacheNode(JSRuntime* RT_, const void* TypeId_) : RT(RT_), TypeId(TypeId_), UserData(nullptr), Next(nullptr), MustCallFinalize(false)
     {
     }
 

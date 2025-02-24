@@ -177,7 +177,7 @@ target_include_directories(PapiQjs PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
-target_link_libraries(PapiQjs PUBLIC ${qjs_libs})
+target_link_libraries(PapiQjs PUBLIC ${qjs_libs} PapiRegister)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -nostdlib")
 
 target_compile_definitions(PapiQjs PUBLIC EA_DEPRECATIONS_FOR_2024_APRIL=EA_DISABLED)
