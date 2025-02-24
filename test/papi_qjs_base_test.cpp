@@ -148,6 +148,37 @@ TEST_F(PApiBaseTest, CreateJsFunction) {
 }
 
 
+TEST_F(PApiBaseTest, PropertyGetSet) {
+    auto scope = api->open_scope(env_ref);
+    auto env = api->get_env_from_ref(env_ref);
+
+    auto g = api->global(env);
+    api->set_property(env, g, "PropertyGetSet", api->create_string_utf8(env, "123", 3));
+
+    auto str = api->get_property(env, g, "PropertyGetSet");
+    ASSERT_TRUE(api->is_string(env, str));
+    size_t len = 0;
+    api->get_value_string_utf8(env, str, nullptr, &len);
+    ASSERT_EQ(len, 3);
+    char buff[4] = {0};
+    api->get_value_string_utf8(env, str, buff, &len);
+    buff[3] = 0;
+    EXPECT_STREQ("123", buff);
+
+    api->set_property_uint32(env, g, 5, api->create_string_utf8(env, "888", 3));
+    str = api->get_property_uint32(env, g, 5);
+    ASSERT_TRUE(api->is_string(env, str));
+    len = 0;
+    api->get_value_string_utf8(env, str, nullptr, &len);
+    ASSERT_EQ(len, 3);
+    buff[3] = 0;
+    api->get_value_string_utf8(env, str, buff, &len);
+    EXPECT_STREQ("888", buff);
+
+    api->close_scope(scope);
+}
+
+
 } // namespace qjsimpl
 } // namespace pesapi
 
