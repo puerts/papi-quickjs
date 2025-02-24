@@ -22,7 +22,7 @@ jobs:
       run: |
         cd $GITHUB_WORKSPACE
         chmod +x make_osx.sh
-        sh ./make_osx.sh
+        sh ./make_osx.sh Debug
         ./build/Release/papi_qjs_test
         
   build_ios:
@@ -85,7 +85,7 @@ jobs:
       run: |
         cd $GITHUB_WORKSPACE
         chmod +x make_linux64.sh
-        ./make_linux64.sh
+        ./make_linux64.sh Debug
         ./build_linux64/papi_qjs_test
         
   build_wasm:
@@ -115,7 +115,7 @@ jobs:
       uses: microsoft/setup-msbuild@v1.1
     - name: Build
       run: |
-        .\make_win64.bat
+        .\make_win64.bat Debug
         .\build\Release\papi_qjs_test.exe
 
 
