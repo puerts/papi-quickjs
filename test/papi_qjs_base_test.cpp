@@ -50,7 +50,7 @@ protected:
         auto env = api->get_env_from_ref(env_ref);
 
         auto g = api->global(env);
-        api->set_property(env, g, "loadClass", api->create_function(env, LoadClass, this, EmptyFinalizer));
+        api->set_property(env, g, "loadClass", api->create_function(env, LoadClass, this, nullptr));
         api->close_scope(scope);
     }
 
@@ -214,13 +214,14 @@ TEST_F(PApiBaseTest, PropertyGetSet) {
 }
 
 TEST_F(PApiBaseTest, ClassCtorFinalize) {
-    /*auto scope = api->open_scope(env_ref);
+    auto scope = api->open_scope(env_ref);
     auto env = api->get_env_from_ref(env_ref);
 
-    auto code = "loadClass(Test');";
+    auto code = "loadClass('Test');";
     api->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
+    ASSERT_FALSE(api->has_caught(scope));
 
-    api->close_scope(scope);*/
+    api->close_scope(scope);
 }
 
 
