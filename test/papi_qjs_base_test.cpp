@@ -36,10 +36,7 @@ public:
     void* finalizer_env_private = nullptr;
 
 protected:
-    static void EmptyFinalizer(struct pesapi_ffi* apis, void* data, void* env_private)
-    {
-
-    }
+    const void* typeId = "Test";
 
     void SetUp() override {
         //printf("SetUp\n");
@@ -89,17 +86,15 @@ protected:
 };
 
 TEST_F(PApiBaseTest, CreateAndDestroyMultQjsEnv) {
-    //多次调用create_qjs_env和destroy_qjs_env
-    //for (int i = 0; i < 10; i++) {
-    //   pesapi_env_ref env_ref = create_qjs_env();
-    //    destroy_qjs_env(env_ref);
-    //}
+    for (int i = 0; i < 10; i++) {
+       pesapi_env_ref env_ref = create_qjs_env();
+        destroy_qjs_env(env_ref);
+    }
 }
 
 TEST_F(PApiBaseTest, RegApi) {
     pesapi_property_descriptor properties = pesapi_alloc_property_descriptors(1);
     pesapi_set_method_info(properties, 0, "Foo", true, Foo, NULL, NULL);
-    const void* typeId = "Test";
     pesapi_define_class(typeId, NULL, "Test", NULL, NULL, 1, properties, NULL);
 
     auto clsDef = puerts::FindClassByID(typeId);

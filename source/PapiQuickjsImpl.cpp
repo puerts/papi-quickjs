@@ -457,6 +457,10 @@ void* pesapi_get_userdata(pesapi_callback_info pinfo)
 void pesapi_add_return(pesapi_callback_info pinfo, pesapi_value value)
 {
     pinfo->res = *qjsValueFromPesapiValue(value);
+    if (JS_VALUE_HAS_REF_COUNT(pinfo->res)) {
+        JS_DupValue(pinfo->ctx, pinfo->res);
+    }
+
 }
 
 void pesapi_throw_by_string(pesapi_callback_info pinfo, const char* msg)

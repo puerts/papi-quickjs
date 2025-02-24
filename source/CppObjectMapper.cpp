@@ -134,25 +134,25 @@ JSValue CppObjectMapper::CreateClass(const puerts::JSClassDefinition* ClassDefin
         puerts::JSPropertyInfo* PropertyInfo = ClassDefinition->Properties;
         while (PropertyInfo && PropertyInfo->Name)
         {
-
+            ++PropertyInfo;
         }
 
         PropertyInfo = ClassDefinition->Variables;
         while (PropertyInfo && PropertyInfo->Name)
         {
-
+            ++PropertyInfo;
         }
 
         puerts::JSFunctionInfo* FunctionInfo = ClassDefinition->Methods;
         while (FunctionInfo && FunctionInfo->Name && FunctionInfo->Callback)
         {
-
+            ++FunctionInfo;
         }
 
         FunctionInfo = ClassDefinition->Functions;
         while (FunctionInfo && FunctionInfo->Name && FunctionInfo->Callback)
         {
-
+            ++FunctionInfo;
         }
 
         JSValue ctor_data[2] {
@@ -188,6 +188,7 @@ JSValue CppObjectMapper::CreateClass(const puerts::JSClassDefinition* ClassDefin
         }, 0, 0, 2, &ctor_data[0]);
 
         TypeIdToFunctionMap[ClassDefinition->TypeId] = func;
+        JS_DupValue(ctx, func);
         return func;
     }
     return it->second;
@@ -239,6 +240,10 @@ void CppObjectMapper::Initialize(JSContext* ctx_)
 
 void CppObjectMapper::Cleanup()
 {
+    for(auto& kv : TypeIdToFunctionMap)
+    {
+        JS_FreeValue(ctx, kv.second);
+    }
     CDataCache.clear();
     TypeIdToFunctionMap.clear();
     //CDataCache.~hash_map();
@@ -274,11 +279,11 @@ void destroy_qjs_env(pesapi_env_ref env_ref)
     pesapi::qjsimpl::CppObjectMapper* mapper = reinterpret_cast<pesapi::qjsimpl::CppObjectMapper*>(JS_GetRuntimeOpaque(rt));
     //pesapi::qjsimpl::g_pesapi_ffi.close_scope(scope);
     pesapi::qjsimpl::g_pesapi_ffi.release_env_ref(env_ref);
+    mapper->Cleanup();
     JS_FreeContext(ctx);
     JS_FreeRuntime(rt);
     if (mapper)
     {
-        mapper->Cleanup();
         mapper->~CppObjectMapper();
         free(mapper);
     }
