@@ -107,7 +107,7 @@ void CppObjectMapper::AddToCache(const puerts::JSClassDefinition* typeInfo, cons
     }
     else
     {
-        auto Ret = CDataCache.insert({ptr, FObjectCacheNode(JS_GetRuntime(ctx), typeInfo->TypeId)});
+        auto Ret = CDataCache.insert({ptr, FObjectCacheNode(typeInfo->TypeId)});
         CacheNodePtr = &Ret.first->second;
     }
     CacheNodePtr->Value = value;

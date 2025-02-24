@@ -18,24 +18,22 @@ namespace qjsimpl
 class FObjectCacheNode
 {
 public:
-    inline FObjectCacheNode(JSRuntime* RT_, const void* TypeId_) : RT(RT_), TypeId(TypeId_), UserData(nullptr), Next(nullptr), MustCallFinalize(false)
+    inline FObjectCacheNode(const void* TypeId_) :TypeId(TypeId_), UserData(nullptr), Next(nullptr), MustCallFinalize(false)
     {
     }
 
-    inline FObjectCacheNode(JSRuntime* RT_, const void* TypeId_, FObjectCacheNode* Next_)
-        : RT(RT_), TypeId(TypeId_), UserData(nullptr), Next(Next_), MustCallFinalize(false)
+    inline FObjectCacheNode(const void* TypeId_, FObjectCacheNode* Next_)
+        : TypeId(TypeId_), UserData(nullptr), Next(Next_), MustCallFinalize(false)
     {
     }
 
     inline FObjectCacheNode(FObjectCacheNode&& other) noexcept
-        : RT(other.RT)
-        , TypeId(other.TypeId)
+        : TypeId(other.TypeId)
         , UserData(other.UserData)
         , Next(other.Next)
         , Value(other.Value)
         , MustCallFinalize(other.MustCallFinalize)
     {
-        other.RT = nullptr;
         other.TypeId = nullptr;
         other.UserData = nullptr;
         other.Next = nullptr;
@@ -44,7 +42,6 @@ public:
 
     inline FObjectCacheNode& operator=(FObjectCacheNode&& rhs) noexcept
     {
-        RT = rhs.RT;
         TypeId = rhs.TypeId;
         Next = rhs.Next;
         Value = rhs.Value;
@@ -119,12 +116,10 @@ public:
     inline FObjectCacheNode* Add(const void* TypeId_)
     {
         FObjectCacheNode* newNode = static_cast<FObjectCacheNode*>(malloc(sizeof(FObjectCacheNode)));
-        new (newNode) FObjectCacheNode(RT, TypeId_, Next);
+        new (newNode) FObjectCacheNode(TypeId_, Next);
         Next = newNode;
         return Next;
     }
-
-    JSRuntime* RT;
 
     const void* TypeId;
 
