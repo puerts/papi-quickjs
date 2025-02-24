@@ -25,7 +25,6 @@ struct FuncFinalizeData
 
 void PApiFuncFinalizer(JSRuntime* rt, JSValue val)
 {
-    printf("func_finalizer\n");
     CppObjectMapper* mapper = reinterpret_cast<CppObjectMapper*>(JS_GetRuntimeOpaque(rt));
     FuncFinalizeData* data = (FuncFinalizeData*)JS_GetOpaque(val, mapper->funcTracerClassId);
     if (data->finalize)
@@ -43,13 +42,11 @@ JSValue CppObjectMapper::CreateFunction(pesapi_callback Callback, void* Data, pe
     data->mapper = this;
 
     JSValue traceObj = JS_NewObjectClass(ctx, funcTracerClassId);
-    printf("func_tracer_class_id: %d\n", funcTracerClassId);
     JS_SetOpaque(traceObj, data);
     JSValue func_data[3] {
         JS_MKPTR(JS_TAG_EXTERNAL, (void*)Callback), 
         JS_MKPTR(JS_TAG_EXTERNAL, Data), 
         traceObj
-        //JS_MKPTR(JS_TAG_EXTERNAL, (void*)Finalize)
         };
 
     JSValue func = JS_NewCFunctionData(ctx, [](JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, int magic, JSValue *func_data) -> JSValue {
@@ -66,6 +63,8 @@ JSValue CppObjectMapper::CreateFunction(pesapi_callback Callback, void* Data, pe
             return callbackInfo.res;
         }
     }, 0, 0, 3, &func_data[0]);
+
+    JS_FreeValue(ctx, traceObj); // 在JS_NewCFunctionData有个dup的过程
 
     return func;
 }
