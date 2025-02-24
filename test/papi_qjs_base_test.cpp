@@ -54,9 +54,10 @@ TEST_F(PApiBaseTest, CreateAndDestroyMultQjsEnv) {
 TEST_F(PApiBaseTest, RegApi) {
     pesapi_property_descriptor properties = pesapi_alloc_property_descriptors(1);
     pesapi_set_method_info(properties, 0, "Foo", true, Foo, NULL, NULL);
-    pesapi_define_class("Test", NULL, "Test", NULL, NULL, 1, properties, NULL);
+    const void* typeId = "Test";
+    pesapi_define_class(typeId, NULL, "Test", NULL, NULL, 1, properties, NULL);
 
-    auto clsDef = puerts::FindClassByID("Test");
+    auto clsDef = puerts::FindClassByID(typeId);
     ASSERT_TRUE(clsDef != nullptr);
 
     ASSERT_TRUE(strcmp(clsDef->Functions[0].Name, "Foo") == 0);
