@@ -1,4 +1,4 @@
-#include "CppObjectMapper.h"
+﻿#include "CppObjectMapper.h"
 #include "pesapi.h"
 #include "PapiData.h"
 
@@ -106,6 +106,8 @@ void CppObjectMapper::Initialize(JSContext* ctx_)
 
 void CppObjectMapper::Cleanup()
 {
+    CDataCache.clear();
+    TypeIdToFunctionMap.clear();
     if (rt)
     {
         JS_SetRuntimeOpaque(rt, nullptr);
@@ -137,17 +139,21 @@ pesapi_env_ref create_qjs_env()
 
 void destroy_qjs_env(pesapi_env_ref env_ref)
 {
-    auto scope = pesapi::qjsimpl::g_pesapi_ffi.open_scope(env_ref);
+    //auto scope = pesapi::qjsimpl::g_pesapi_ffi.open_scope(env_ref);
     JSContext* ctx = reinterpret_cast<JSContext*>(pesapi::qjsimpl::g_pesapi_ffi.get_env_from_ref(env_ref));
     JSRuntime* rt = JS_GetRuntime(ctx);
     pesapi::qjsimpl::CppObjectMapper* mapper = reinterpret_cast<pesapi::qjsimpl::CppObjectMapper*>(JS_GetRuntimeOpaque(rt));
-    pesapi::qjsimpl::g_pesapi_ffi.close_scope(scope);
+    //pesapi::qjsimpl::g_pesapi_ffi.close_scope(scope);
+    pesapi::qjsimpl::g_pesapi_ffi.release_env_ref(env_ref);
     if (mapper)
     {
         mapper->Cleanup();
         mapper->~CppObjectMapper();
         free(mapper);
     }
+    
+    JS_FreeContext(ctx);
+    JS_FreeRuntime(rt);
 }
 
 struct pesapi_ffi* get_papi_ffi()
