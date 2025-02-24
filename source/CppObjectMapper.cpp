@@ -188,7 +188,7 @@ JSValue CppObjectMapper::CreateClass(const puerts::JSClassDefinition* ClassDefin
         }, 0, 0, 2, &ctor_data[0]);
 
         TypeIdToFunctionMap[ClassDefinition->TypeId] = func;
-        JS_DupValue(ctx, func);
+        JS_DupValue(ctx, func); //JS_FreeValue in Cleanup
         return func;
     }
     return it->second;
