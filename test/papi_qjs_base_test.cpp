@@ -25,15 +25,22 @@ public:
         }
     }
 
+    static void JsFuncFinalizer(struct pesapi_ffi* apis, void* data, void* env_private)
+    {
+        printf("JsFuncFinalizer %p, %p\n", data, env_private);
+    }
+
     int bar_data = 0;
 
 protected:
     void SetUp() override {
+        //printf("SetUp\n");
         env_ref = create_qjs_env();
         api = get_papi_ffi();
     }
 
     void TearDown() override {
+        //printf("TearDown\n");
         if (env_ref) {
             destroy_qjs_env(env_ref);
         }
@@ -114,12 +121,20 @@ TEST_F(PApiBaseTest, CreateJsFunction) {
     auto env = api->get_env_from_ref(env_ref);
 
     auto g = api->global(env);
-    api->set_property(env, g, "Bar__", api->create_function(env, Bar, this, nullptr));
+    api->set_property(env, g, "Bar__", api->create_function(env, Bar, this, JsFuncFinalizer));
     auto code = "Bar__(3344);";
     bar_data = 100;
     auto ret = api->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
+    if (api->has_caught (scope)) {
+        printf("%s\n", api->get_exception_as_string(scope, true));
+    }
     ASSERT_FALSE(api->has_caught(scope));
     EXPECT_EQ(bar_data, 3344);
+
+    code = "globalThis.Bar__ = undefined;";
+    //code = "Bar__(8899);";
+    ret = api->eval(env, (const uint8_t*)(code), strlen(code), "test2.js");
+    //ASSERT_FALSE(api->has_caught(scope));
 
     api->close_scope(scope);
 }

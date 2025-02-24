@@ -13,21 +13,43 @@ extern pesapi_ffi g_pesapi_ffi;
 void PApiObjectFinalizer(JSRuntime* rt, JSValue val)
 {
     CppObjectMapper* mapper = reinterpret_cast<CppObjectMapper*>(JS_GetRuntimeOpaque(rt));
-    JS_GetOpaque(val, mapper->class_id);
+    JS_GetOpaque(val, mapper->classId);
 }
+
+struct FuncFinalizeData
+{
+    pesapi_function_finalize finalize;
+    void* data;
+    CppObjectMapper* mapper;
+};
 
 void PApiFuncFinalizer(JSRuntime* rt, JSValue val)
 {
+    printf("func_finalizer\n");
     CppObjectMapper* mapper = reinterpret_cast<CppObjectMapper*>(JS_GetRuntimeOpaque(rt));
-    JS_GetOpaque(val, mapper->func_tracer_class_id);
+    FuncFinalizeData* data = (FuncFinalizeData*)JS_GetOpaque(val, mapper->funcTracerClassId);
+    if (data->finalize)
+    {
+        data->finalize(&g_pesapi_ffi, data->data, (void*)(data->mapper->GetEnvPrivate())); // TODO: env_private 和 get_env_private 的const修饰统一
+    }
+    js_free_rt(rt, data);
 }
 
 JSValue CppObjectMapper::CreateFunction(pesapi_callback Callback, void* Data, pesapi_function_finalize Finalize)
 {
+    FuncFinalizeData* data = (FuncFinalizeData*)js_malloc(ctx, sizeof(FuncFinalizeData));
+    data->finalize = Finalize;
+    data->data = Data;
+    data->mapper = this;
+
+    JSValue traceObj = JS_NewObjectClass(ctx, funcTracerClassId);
+    printf("func_tracer_class_id: %d\n", funcTracerClassId);
+    JS_SetOpaque(traceObj, data);
     JSValue func_data[3] {
         JS_MKPTR(JS_TAG_EXTERNAL, (void*)Callback), 
         JS_MKPTR(JS_TAG_EXTERNAL, Data), 
-        JS_MKPTR(JS_TAG_EXTERNAL, (void*)Finalize)
+        traceObj
+        //JS_MKPTR(JS_TAG_EXTERNAL, (void*)Finalize)
         };
 
     JSValue func = JS_NewCFunctionData(ctx, [](JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, int magic, JSValue *func_data) -> JSValue {
@@ -65,9 +87,9 @@ void CppObjectMapper::Initialize(JSContext* ctx_)
     cls_def.gc_mark = NULL;
     cls_def.call = NULL;
 
-    class_id = 0;
-    JS_NewClassID(rt, &class_id);
-    JS_NewClass(rt, class_id, &cls_def);
+    classId = 0;
+    JS_NewClassID(rt, &classId);
+    JS_NewClass(rt, classId, &cls_def);
 
 
     JSClassDef func_tracer_cls_def;
@@ -77,9 +99,9 @@ void CppObjectMapper::Initialize(JSContext* ctx_)
     func_tracer_cls_def.gc_mark = NULL;
     func_tracer_cls_def.call = NULL;
 
-    func_tracer_class_id = 0;
-    JS_NewClassID(rt, &func_tracer_class_id);
-    JS_NewClass(rt, func_tracer_class_id, &func_tracer_cls_def);
+    funcTracerClassId = 0;
+    JS_NewClassID(rt, &funcTracerClassId);
+    JS_NewClass(rt, funcTracerClassId, &func_tracer_cls_def);
 }
 
 void CppObjectMapper::Cleanup()

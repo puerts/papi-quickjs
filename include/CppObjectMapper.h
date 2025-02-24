@@ -37,9 +37,10 @@ struct CppObjectMapper
 
     JSRuntime* rt;
     JSContext* ctx;
-    JSClassID class_id;
-    JSClassID func_tracer_class_id;
-    eastl::shared_ptr<int> Ref = eastl::allocate_shared<int>(eastl::allocator_malloc("shared_ptr"), 0);
+    JSClassID classId;
+    JSClassID funcTracerClassId;
+    const void* envPrivate = nullptr;
+    eastl::shared_ptr<int> ref = eastl::allocate_shared<int>(eastl::allocator_malloc("shared_ptr"), 0);
 
     static eastl::weak_ptr<int> GetEnvLifeCycleTracker(JSContext* ctx)
     {
@@ -50,7 +51,17 @@ struct CppObjectMapper
 
     eastl::weak_ptr<int> GetEnvLifeCycleTracker()
     {
-        return eastl::weak_ptr<int>(Ref);
+        return eastl::weak_ptr<int>(ref);
+    }
+
+    const void* GetEnvPrivate() const
+    {
+        return envPrivate;
+    }
+
+    void SetEnvPrivate(const void* envPrivate_)
+    {
+        envPrivate = envPrivate_;
     }
 
     JSValue CreateFunction(pesapi_callback Callback, void* Data, pesapi_function_finalize Finalize);

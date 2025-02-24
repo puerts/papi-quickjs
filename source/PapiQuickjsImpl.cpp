@@ -189,6 +189,7 @@ pesapi_value pesapi_create_function(pesapi_env env, pesapi_callback native_impl,
     auto ctx = qjsContextFromPesapiEnv(env);
     auto ret = allocValueInCurrentScope(ctx);
     *ret = pesapi::qjsimpl::CppObjectMapper::Get(ctx)->CreateFunction(native_impl, data, finalize);
+    //JS_DupValue(ctx, *ret);
     return pesapiValueFromQjsValue(ret);
 }
 
@@ -626,7 +627,11 @@ void** pesapi_get_ref_internal_fields(pesapi_value_ref value_ref, uint32_t* pint
 
 pesapi_value pesapi_get_property(pesapi_env env, pesapi_value pobject, const char* key)
 {
-    return {};
+    auto ctx = qjsContextFromPesapiEnv(env);
+    JSValue* obj = qjsValueFromPesapiValue(pobject);
+    auto ret = allocValueInCurrentScope(ctx);
+    *ret = JS_GetPropertyStr(ctx, *obj, key);
+    return pesapiValueFromQjsValue(ret);
 }
 
 void pesapi_set_property(pesapi_env env, pesapi_value pobject, const char* key, pesapi_value pvalue)
@@ -634,6 +639,9 @@ void pesapi_set_property(pesapi_env env, pesapi_value pobject, const char* key, 
     auto ctx = qjsContextFromPesapiEnv(env);
     JSValue* obj = qjsValueFromPesapiValue(pobject);
     JSValue* val = qjsValueFromPesapiValue(pvalue);
+    if (JS_VALUE_HAS_REF_COUNT(*val)) {
+        JS_DupValue(ctx, *val);
+    }
     JS_SetPropertyStr(ctx, *obj, key, *val);
 }
 
@@ -649,11 +657,22 @@ bool pesapi_set_private(pesapi_env env, pesapi_value pobject, void* ptr)
 
 pesapi_value pesapi_get_property_uint32(pesapi_env env, pesapi_value pobject, uint32_t key)
 {
-    return {};
+    auto ctx = qjsContextFromPesapiEnv(env);
+    JSValue* obj = qjsValueFromPesapiValue(pobject);
+    auto ret = allocValueInCurrentScope(ctx);
+    *ret = JS_GetPropertyUint32(ctx, *obj, key);
+    return pesapiValueFromQjsValue(ret);
 }
 
 void pesapi_set_property_uint32(pesapi_env env, pesapi_value pobject, uint32_t key, pesapi_value pvalue)
 {
+    auto ctx = qjsContextFromPesapiEnv(env);
+    JSValue* obj = qjsValueFromPesapiValue(pobject);
+    JSValue* val = qjsValueFromPesapiValue(pvalue);
+    if (JS_VALUE_HAS_REF_COUNT(*val)) {
+        JS_DupValue(ctx, *val);
+    }
+    JS_SetPropertyUint32(ctx, *obj, key, *val);
 }
 
 pesapi_value pesapi_call_function(pesapi_env env, pesapi_value pfunc, pesapi_value this_object, int argc, const pesapi_value argv[])
@@ -689,11 +708,14 @@ pesapi_value pesapi_global(pesapi_env env)
 
 const void* pesapi_get_env_private(pesapi_env env)
 {
-    return {};
+    auto ctx = qjsContextFromPesapiEnv(env);
+    return CppObjectMapper::Get(ctx)->GetEnvPrivate();
 }
 
 void pesapi_set_env_private(pesapi_env env, const void* ptr)
 {
+    auto ctx = qjsContextFromPesapiEnv(env);
+    CppObjectMapper::Get(ctx)->SetEnvPrivate(ptr);
 }
 
 pesapi_ffi g_pesapi_ffi {
