@@ -23,7 +23,7 @@ jobs:
         cd $GITHUB_WORKSPACE
         chmod +x make_osx.sh
         sh ./make_osx.sh Debug
-        ./build/Release/papi_qjs_test
+        ./build/Debug/papi_qjs_test
         
   build_ios:
     name: iOS
@@ -116,6 +116,6 @@ jobs:
     - name: Build
       run: |
         .\make_win64.bat Debug
-        .\build\Release\papi_qjs_test.exe
+        .\build\Debug\papi_qjs_test.exe
 
 
