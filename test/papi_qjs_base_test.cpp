@@ -27,10 +27,13 @@ public:
 
     static void JsFuncFinalizer(struct pesapi_ffi* apis, void* data, void* env_private)
     {
-        printf("JsFuncFinalizer %p, %p\n", data, env_private);
+        PApiBaseTest* self = (PApiBaseTest*)data;
+        self->finalizer_env_private = env_private;
     }
 
     int bar_data = 0;
+
+    void* finalizer_env_private = nullptr;
 
 protected:
     void SetUp() override {
@@ -132,11 +135,16 @@ TEST_F(PApiBaseTest, CreateJsFunction) {
     EXPECT_EQ(bar_data, 3344);
 
     code = "globalThis.Bar__ = undefined;";
-    //code = "Bar__(8899);";
+    finalizer_env_private = nullptr;
+    api->set_env_private(env, &bar_data);
     ret = api->eval(env, (const uint8_t*)(code), strlen(code), "test2.js");
-    //ASSERT_FALSE(api->has_caught(scope));
+    ASSERT_FALSE(api->has_caught(scope));
 
     api->close_scope(scope);
+
+    EXPECT_EQ((void*)&bar_data, finalizer_env_private);
+    EXPECT_EQ(api->get_env_private(env), finalizer_env_private);
+    api->set_env_private(env, nullptr);
 }
 
 
