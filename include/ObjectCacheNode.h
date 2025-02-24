@@ -32,7 +32,7 @@ public:
         , TypeId(other.TypeId)
         , UserData(other.UserData)
         , Next(other.Next)
-        , Value(JS_DupValueRT(other.RT, other.Value))
+        , Value(other.Value)
         , MustCallFinalize(other.MustCallFinalize)
     {
         other.RT = nullptr;
@@ -47,7 +47,7 @@ public:
         RT = rhs.RT;
         TypeId = rhs.TypeId;
         Next = rhs.Next;
-        Value = JS_DupValueRT(RT, rhs.Value);
+        Value = rhs.Value;
         UserData = rhs.UserData;
         MustCallFinalize = rhs.MustCallFinalize;
         rhs.UserData = nullptr;
@@ -63,8 +63,8 @@ public:
         {
             Next->~FObjectCacheNode();
             free(Next);
+            Next = nullptr;
         }
-        JS_FreeValueRT(RT, Value);
     }
 
     FObjectCacheNode* Find(const void* TypeId_)
@@ -97,7 +97,6 @@ public:
                 {
                     TypeId = nullptr;
                     Next = nullptr;
-                    JS_FreeValueRT(RT, Value);
                 }
             }
             return this;

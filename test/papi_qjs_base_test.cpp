@@ -36,8 +36,6 @@ public:
     void* finalizer_env_private = nullptr;
 
 protected:
-    const void* typeId = "Test";
-
     void SetUp() override {
         //printf("SetUp\n");
         env_ref = create_qjs_env();
@@ -93,6 +91,8 @@ TEST_F(PApiBaseTest, CreateAndDestroyMultQjsEnv) {
 }
 
 TEST_F(PApiBaseTest, RegApi) {
+    const void* typeId = "Test";
+
     pesapi_property_descriptor properties = pesapi_alloc_property_descriptors(1);
     pesapi_set_method_info(properties, 0, "Foo", true, Foo, NULL, NULL);
     pesapi_define_class(typeId, NULL, "Test", NULL, NULL, 1, properties, NULL);
@@ -208,12 +208,50 @@ TEST_F(PApiBaseTest, PropertyGetSet) {
     api->close_scope(scope);
 }
 
+struct TestStruct {
+    TestStruct(int a) {
+        printf("TestStruct ctor: %d, %p\n", a, this);
+        this->a = a;
+    }
+
+    int a;
+    ~TestStruct() {
+        printf("TestStruct dtor: %d, %p\n", a, this);
+    }
+};
+
+void* TestStructCtor(struct pesapi_ffi* apis, pesapi_callback_info info)
+{
+    auto env = apis->get_env(info);
+    auto p0 = apis->get_arg(info, 0);
+    int a = apis->get_value_int32(env, p0);
+    return new TestStruct(a);
+}
+
+void TestStructFinalize(struct pesapi_ffi* apis, void* ptr, void* class_data, void* env_private)
+{
+    delete (TestStruct*)ptr;
+}
+
 TEST_F(PApiBaseTest, ClassCtorFinalize) {
     auto scope = api->open_scope(env_ref);
     auto env = api->get_env_from_ref(env_ref);
 
-    auto code = "loadClass('Test');";
+    const void* typeId = "TestStruct";
+
+    pesapi_define_class(typeId, NULL, "TestStruct", TestStructCtor, TestStructFinalize, 0, NULL, NULL);
+
+    auto code = R"(
+                (function() {
+                    const TestStruct = loadClass('TestStruct');
+                    const obj = new TestStruct(123);
+                })();
+              )";
     api->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
+    if (api->has_caught(scope))
+    {
+        printf("%s\n", api->get_exception_as_string(scope, true));
+    }
     ASSERT_FALSE(api->has_caught(scope));
 
     api->close_scope(scope);

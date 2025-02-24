@@ -174,11 +174,12 @@ JSValue CppObjectMapper::CreateClass(const puerts::JSClassDefinition* ClassDefin
                 mapper->AddToCache(clsDef, ptr, callbackInfo.this_val, true);
                 if (JS_IsException(callbackInfo.res))
                 {
+                    JS_FreeValue(ctx, callbackInfo.this_val);
                     return JS_Throw(ctx, callbackInfo.ex);
                 }
                 else
                 {
-                    return callbackInfo.res;
+                    return callbackInfo.this_val;
                 }
             }
             else
@@ -186,6 +187,8 @@ JSValue CppObjectMapper::CreateClass(const puerts::JSClassDefinition* ClassDefin
                 return JS_Throw(ctx, CppObjectMapper::CreateError(ctx, "no initialize function"));
             }
         }, 0, 0, 2, &ctor_data[0]);
+
+        JS_SetConstructorBit(ctx, func, 1);
 
         TypeIdToFunctionMap[ClassDefinition->TypeId] = func;
         JS_DupValue(ctx, func); //JS_FreeValue in Cleanup
