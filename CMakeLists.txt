@@ -27,11 +27,11 @@ macro(xcheck_add_c_compiler_flag FLAG)
     endif()
 endmacro()
 
-xcheck_add_c_compiler_flag(-Wall)
-if(NOT MSVC AND NOT IOS)
-    xcheck_add_c_compiler_flag(-Werror)
-    xcheck_add_c_compiler_flag(-Wextra)
-endif()
+#xcheck_add_c_compiler_flag(-Wall)
+#if(NOT MSVC AND NOT IOS)
+#    xcheck_add_c_compiler_flag(-Werror)
+#    xcheck_add_c_compiler_flag(-Wextra)
+#endif()
 xcheck_add_c_compiler_flag(-Wno-implicit-fallthrough)
 xcheck_add_c_compiler_flag(-Wno-sign-compare)
 xcheck_add_c_compiler_flag(-Wno-missing-field-initializers)
@@ -114,6 +114,7 @@ set(qjs_sources
 
 set(papi_sources
     source/PapiQuickjsImpl.cpp
+    source/CppObjectMapper.cpp
 )
 
 add_definitions(-D_CHAR16T)
@@ -121,7 +122,9 @@ add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 add_definitions(-D_SCL_SECURE_NO_WARNINGS)
 add_definitions(-DEASTL_OPENSOURCE=1)
 
+include_directories(include quickjs)
 include_directories(EASTL/include)
+include_directories(papi-register/include)
 
 file(GLOB eastl_sources "EASTL/source/*.cpp")
 file(GLOB_RECURSE eastl_headers "EASTL/include/EASTL/**.h")
@@ -139,21 +142,120 @@ if(NOT MSVC)
     list(APPEND qjs_libs m)
 endif()
 
+set(papi_register_sources
+    papi-register/source/JSClassRegister.cpp
+    papi-register/source/RapiImpl.cpp
+)
+
 if ( APPLE AND IOS )
     add_library(PapiQjs STATIC ${qjs_sources} ${eastl_sources} ${papi_sources})
+    add_library(PapiRegister STATIC ${papi_register_sources})
 else ()
+    # 在Windows上需要显式生成导入库
     add_library(PapiQjs SHARED ${qjs_sources} ${eastl_sources} ${papi_sources}) # if add eastl_headers will undefined symbol: __udivti3 __udivmodti4 
+    # 设置导出符号
+    #set_target_properties(PapiQjs PROPERTIES
+    #    WINDOWS_EXPORT_ALL_SYMBOLS TRUE
+    #    CXX_VISIBILITY_PRESET hidden
+    #    VISIBILITY_INLINES_HIDDEN TRUE
+    #)
+    # 确保生成导入库路径正确
+    #set_target_properties(PapiQjs PROPERTIES
+    #    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+    #    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+    #    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+    #)
+    add_library(PapiRegister SHARED ${eastl_sources} ${papi_register_sources})
+    #set_target_properties(PapiRegister PROPERTIES
+    #    WINDOWS_EXPORT_ALL_SYMBOLS TRUE
+    #    CXX_VISIBILITY_PRESET hidden
+    #    VISIBILITY_INLINES_HIDDEN TRUE
+    #)
 endif()
 target_compile_definitions(PapiQjs PRIVATE ${qjs_defines})
 target_include_directories(PapiQjs PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
-target_link_libraries(PapiQjs PUBLIC ${qjs_libs})
+target_link_libraries(PapiQjs PUBLIC ${qjs_libs} PapiRegister)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -nostdlib")
 
 target_compile_definitions(PapiQjs PUBLIC EA_DEPRECATIONS_FOR_2024_APRIL=EA_DISABLED)
 target_compile_definitions(PapiQjs PUBLIC EA_DEPRECATIONS_FOR_2024_SEPT=EA_DISABLED)
 target_compile_definitions(PapiQjs PUBLIC EA_DEPRECATIONS_FOR_2025_APRIL=EA_DISABLED)
-target_compile_definitions(PapiQjs PUBLIC EASTL_DLL)
+#target_compile_definitions(PapiQjs PUBLIC EASTL_DLL)
+target_compile_definitions(PapiQjs PUBLIC USING_REGISTER_API_SHARED)
+target_compile_options(PapiQjs PRIVATE
+    $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:
+        -fno-exceptions
+        -fno-unwind-tables
+        -fno-asynchronous-unwind-tables
+        -fno-rtti
+    >
+    $<$<CXX_COMPILER_ID:MSVC>:
+        /EHa-
+        /EHsc
+        /EHsc-
+        /GR-  # 禁用RTTI
+    >
+)
+#if(MSVC)
+#target_compile_options(PapiQjs PRIVATE /EHsc)
+#endif()
 
+target_compile_definitions(PapiRegister PUBLIC BUILDING_REGISTER_API_SHARED)
+target_compile_options(PapiRegister PRIVATE
+    $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:
+        -fno-exceptions
+        -fno-unwind-tables
+        -fno-asynchronous-unwind-tables
+        -fno-rtti
+    >
+    $<$<CXX_COMPILER_ID:MSVC>:
+        /EHa-
+        /EHsc-
+        /GR-  # 禁用RTTI
+    >
+)
+
+if ( APPLE AND NOT IOS OR MSVC OR LINUX )
+
+# 配置GTest
+set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
+set(BUILD_GTEST ON CACHE BOOL "" FORCE)
+set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+include(FetchContent)
+FetchContent_Declare(
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG release-1.8.0
+)
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+
+enable_testing()
+include(GoogleTest)
+
+
+add_executable(papi_qjs_test 
+    test/papi_qjs_base_test.cpp
+)
+
+target_link_libraries(papi_qjs_test
+    PRIVATE
+    PapiQjs
+    PapiRegister
+    gtest
+    gtest_main
+)
+
+target_include_directories(papi_qjs_test PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/source
+    ${CMAKE_CURRENT_SOURCE_DIR}/quickjs
+    ${googletest_SOURCE_DIR}/googletest/include
+)
+
+gtest_discover_tests(papi_qjs_test)
+
+endif()

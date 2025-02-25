@@ -125,7 +125,7 @@ namespace eastl
 
 	public:
 		ref_count_sp(int32_t refCount = 1, int32_t weakRefCount = 1) EA_NOEXCEPT;
-		virtual ~ref_count_sp() EA_NOEXCEPT {}
+		//virtual ~ref_count_sp() EA_NOEXCEPT {}
 
 		int32_t       use_count() const EA_NOEXCEPT;
 		void          addref() EA_NOEXCEPT;

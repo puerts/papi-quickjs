@@ -1038,6 +1038,19 @@ JS_EXTERN uintptr_t js_std_cmd(int cmd, ...);
 #undef js_force_inline
 #undef __js_printf_like
 
+/*-------begin additional function---------*/
+
+JS_BOOL JS_IsArrayBufferView(JSValueConst obj);
+
+JSValue JS_GetArrayBufferView(JSContext *ctx, JSValueConst obj);
+
+JS_BOOL JS_GetArrayBufferViewInfo(JSContext *ctx, JSValueConst obj,
+                               size_t *pbyte_offset,
+                               size_t *pbyte_length,
+                               size_t *pbytes_per_element);
+
+/*-------end additional function---------*/
+
 #ifdef __cplusplus
 } /* extern "C" { */
 #endif
