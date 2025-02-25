@@ -83,14 +83,14 @@ protected:
     void SetUp() override {
         //printf("SetUp\n");
         env_ref = create_qjs_env();
-        api = get_papi_ffi();
+        apis = get_papi_ffi();
 
-        auto scope = api->open_scope(env_ref);
-        auto env = api->get_env_from_ref(env_ref);
+        auto scope = apis->open_scope(env_ref);
+        auto env = apis->get_env_from_ref(env_ref);
 
-        auto g = api->global(env);
-        api->set_property(env, g, "loadClass", api->create_function(env, LoadClass, this, nullptr));
-        api->close_scope(scope);
+        auto g = apis->global(env);
+        apis->set_property(env, g, "loadClass", apis->create_function(env, LoadClass, this, nullptr));
+        apis->close_scope(scope);
     }
 
     static void LoadClass(struct pesapi_ffi* apis, pesapi_callback_info info)
@@ -123,7 +123,7 @@ protected:
     }
 
     pesapi_env_ref env_ref;
-    struct pesapi_ffi* api;
+    struct pesapi_ffi* apis;
 };
 
 TEST_F(PApiBaseTest, CreateAndDestroyMultQjsEnv) {
@@ -149,111 +149,111 @@ TEST_F(PApiBaseTest, RegApi) {
 }
 
 TEST_F(PApiBaseTest, EvalJavaScript) {
-    auto scope = api->open_scope(env_ref);
-    auto env = api->get_env_from_ref(env_ref);
+    auto scope = apis->open_scope(env_ref);
+    auto env = apis->get_env_from_ref(env_ref);
 
     auto code = "123+789";
-    auto ret = api->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
+    auto ret = apis->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
     ASSERT_TRUE(ret != nullptr);
-    ASSERT_TRUE(api->is_int32(env, ret));
-    ASSERT_TRUE(api->get_value_int32(env, ret) == 912);
+    ASSERT_TRUE(apis->is_int32(env, ret));
+    ASSERT_TRUE(apis->get_value_int32(env, ret) == 912);
 
-    api->close_scope(scope);
+    apis->close_scope(scope);
 }
 
 TEST_F(PApiBaseTest, EvalJavaScriptEx) {
-    auto scope = api->open_scope(env_ref);
-    auto env = api->get_env_from_ref(env_ref);
+    auto scope = apis->open_scope(env_ref);
+    auto env = apis->get_env_from_ref(env_ref);
 
     auto code = " (function() { throw new Error('abc'); }) ();";
-    auto ret = api->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
-    ASSERT_TRUE(api->has_caught(scope));
+    auto ret = apis->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
+    ASSERT_TRUE(apis->has_caught(scope));
 
-    EXPECT_STREQ("Error: abc", api->get_exception_as_string(scope, false));
-    EXPECT_STREQ("Error: abc\n    at <anonymous> (test.js:1:21)\n    at <eval> (test.js:1:42)\n", api->get_exception_as_string(scope, true));
+    EXPECT_STREQ("Error: abc", apis->get_exception_as_string(scope, false));
+    EXPECT_STREQ("Error: abc\n    at <anonymous> (test.js:1:21)\n    at <eval> (test.js:1:42)\n", apis->get_exception_as_string(scope, true));
 
-    api->close_scope(scope);
+    apis->close_scope(scope);
 }
 
 TEST_F(PApiBaseTest, SetToGlobal) {
-    auto scope = api->open_scope(env_ref);
-    auto env = api->get_env_from_ref(env_ref);
+    auto scope = apis->open_scope(env_ref);
+    auto env = apis->get_env_from_ref(env_ref);
 
-    auto g = api->global(env);
-    api->set_property(env, g, "SetToGlobal", api->create_int32(env, 123));
+    auto g = apis->global(env);
+    apis->set_property(env, g, "SetToGlobal", apis->create_int32(env, 123));
 
     auto code = " SetToGlobal;";
-    auto ret = api->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
+    auto ret = apis->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
     ASSERT_TRUE(ret != nullptr);
-    ASSERT_TRUE(api->is_int32(env, ret));
-    ASSERT_TRUE(api->get_value_int32(env, ret) == 123);
+    ASSERT_TRUE(apis->is_int32(env, ret));
+    ASSERT_TRUE(apis->get_value_int32(env, ret) == 123);
 
-    api->close_scope(scope);
+    apis->close_scope(scope);
 }
 
 
 TEST_F(PApiBaseTest, CreateJsFunction) {
-    auto scope = api->open_scope(env_ref);
-    auto env = api->get_env_from_ref(env_ref);
+    auto scope = apis->open_scope(env_ref);
+    auto env = apis->get_env_from_ref(env_ref);
 
-    auto g = api->global(env);
-    api->set_property(env, g, "Bar__", api->create_function(env, Bar, this, JsFuncFinalizer));
+    auto g = apis->global(env);
+    apis->set_property(env, g, "Bar__", apis->create_function(env, Bar, this, JsFuncFinalizer));
     auto code = "Bar__(3344);";
     bar_data = 100;
-    auto ret = api->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
-    if (api->has_caught (scope)) {
-        printf("%s\n", api->get_exception_as_string(scope, true));
+    auto ret = apis->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
+    if (apis->has_caught (scope)) {
+        printf("%s\n", apis->get_exception_as_string(scope, true));
     }
-    ASSERT_FALSE(api->has_caught(scope));
+    ASSERT_FALSE(apis->has_caught(scope));
     EXPECT_EQ(bar_data, 3344);
 
     code = "globalThis.Bar__ = undefined;";
     finalizer_env_private = nullptr;
-    api->set_env_private(env, &bar_data);
-    ret = api->eval(env, (const uint8_t*)(code), strlen(code), "test2.js");
-    ASSERT_FALSE(api->has_caught(scope));
+    apis->set_env_private(env, &bar_data);
+    ret = apis->eval(env, (const uint8_t*)(code), strlen(code), "test2.js");
+    ASSERT_FALSE(apis->has_caught(scope));
 
-    api->close_scope(scope);
+    apis->close_scope(scope);
 
     EXPECT_EQ((void*)&bar_data, finalizer_env_private);
-    EXPECT_EQ(api->get_env_private(env), finalizer_env_private);
-    api->set_env_private(env, nullptr);
+    EXPECT_EQ(apis->get_env_private(env), finalizer_env_private);
+    apis->set_env_private(env, nullptr);
 }
 
 
 TEST_F(PApiBaseTest, PropertyGetSet) {
-    auto scope = api->open_scope(env_ref);
-    auto env = api->get_env_from_ref(env_ref);
+    auto scope = apis->open_scope(env_ref);
+    auto env = apis->get_env_from_ref(env_ref);
 
-    auto g = api->global(env);
-    api->set_property(env, g, "PropertyGetSet", api->create_string_utf8(env, "123", 3));
+    auto g = apis->global(env);
+    apis->set_property(env, g, "PropertyGetSet", apis->create_string_utf8(env, "123", 3));
 
-    auto str = api->get_property(env, g, "PropertyGetSet");
-    ASSERT_TRUE(api->is_string(env, str));
+    auto str = apis->get_property(env, g, "PropertyGetSet");
+    ASSERT_TRUE(apis->is_string(env, str));
     size_t len = 0;
-    api->get_value_string_utf8(env, str, nullptr, &len);
+    apis->get_value_string_utf8(env, str, nullptr, &len);
     ASSERT_EQ(len, 3);
     char buff[4] = {0};
-    api->get_value_string_utf8(env, str, buff, &len);
+    apis->get_value_string_utf8(env, str, buff, &len);
     buff[3] = 0;
     EXPECT_STREQ("123", buff);
 
-    api->set_property_uint32(env, g, 5, api->create_string_utf8(env, "888", 3));
-    str = api->get_property_uint32(env, g, 5);
-    ASSERT_TRUE(api->is_string(env, str));
+    apis->set_property_uint32(env, g, 5, apis->create_string_utf8(env, "888", 3));
+    str = apis->get_property_uint32(env, g, 5);
+    ASSERT_TRUE(apis->is_string(env, str));
     len = 0;
-    api->get_value_string_utf8(env, str, nullptr, &len);
+    apis->get_value_string_utf8(env, str, nullptr, &len);
     ASSERT_EQ(len, 3);
     buff[3] = 0;
-    api->get_value_string_utf8(env, str, buff, &len);
+    apis->get_value_string_utf8(env, str, buff, &len);
     EXPECT_STREQ("888", buff);
 
-    api->close_scope(scope);
+    apis->close_scope(scope);
 }
 
 TEST_F(PApiBaseTest, ClassCtorFinalize) {
-    auto scope = api->open_scope(env_ref);
-    auto env = api->get_env_from_ref(env_ref);
+    auto scope = apis->open_scope(env_ref);
+    auto env = apis->get_env_from_ref(env_ref);
 
     TestStruct::ctor_count = 0;
     TestStruct::dtor_count = 0;
@@ -266,19 +266,19 @@ TEST_F(PApiBaseTest, ClassCtorFinalize) {
                     const obj = new TestStruct(123);
                 })();
               )";
-    api->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
-    if (api->has_caught(scope))
+    apis->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
+    if (apis->has_caught(scope))
     {
-        printf("%s\n", api->get_exception_as_string(scope, true));
+        printf("%s\n", apis->get_exception_as_string(scope, true));
     }
-    ASSERT_FALSE(api->has_caught(scope));
+    ASSERT_FALSE(apis->has_caught(scope));
 
     ASSERT_EQ(TestStruct::ctor_count, 1);
     ASSERT_EQ(TestStruct::dtor_count, 1);
     ASSERT_EQ(TestStruct::lastCtorObject, TestStruct::lastDtorObject);
 
 
-    api->close_scope(scope);
+    apis->close_scope(scope);
 }
 
 
@@ -289,4 +289,3 @@ int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
-
