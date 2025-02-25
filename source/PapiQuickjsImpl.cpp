@@ -380,7 +380,11 @@ bool pesapi_is_array(pesapi_env env, pesapi_value pvalue)
 
 pesapi_value pesapi_native_object_to_value(pesapi_env env, const void* type_id, void* object_ptr, bool call_finalize)
 {
-    return {};
+    auto ctx = qjsContextFromPesapiEnv(env);
+    auto mapper = pesapi::qjsimpl::CppObjectMapper::Get(ctx);
+    auto ret = allocValueInCurrentScope(ctx);
+    *ret = mapper->PushNativeObject(type_id, object_ptr, call_finalize);
+    return pesapiValueFromQjsValue(ret);
 }
 
 void* pesapi_get_native_object_ptr(pesapi_env env, pesapi_value pvalue)

@@ -33,6 +33,8 @@ struct TestStruct {
     }
 };
 
+const void* typeId = "TestStruct";
+
 int TestStruct::ctor_count = 0;
 int TestStruct::dtor_count = 0;
 TestStruct* TestStruct::lastCtorObject = nullptr;
@@ -103,16 +105,24 @@ static void CtorCountSetterWrap(struct pesapi_ffi* apis, pesapi_callback_info in
     TestStruct::ctor_count = apis->get_value_int32(env, p0);
 }
 
+static void GetSelfWrap(struct pesapi_ffi* apis, pesapi_callback_info info)
+{
+    auto env = apis->get_env(info);
+    auto self = apis->get_this(info);
+    auto obj = (TestStruct*)apis->get_native_object_ptr(env, self);
+    apis->add_return(info, apis->native_object_to_value(env, typeId, obj, false));
+}
+
 class PApiBaseTest : public ::testing::Test {
 public:
     static void SetUpTestCase() { 
-        const void* typeId = "TestStruct";
-        const int properties_count = 4;
+        const int properties_count = 5;
         pesapi_property_descriptor properties = pesapi_alloc_property_descriptors(properties_count);
         pesapi_set_method_info(properties, 0, "Add", true, AddWrap, NULL, NULL);
         pesapi_set_method_info(properties, 1, "Calc", false, CalcWrap, NULL, NULL);
         pesapi_set_property_info(properties, 2, "a", false, AGetterWrap, ASetterWrap, NULL, NULL, NULL);
         pesapi_set_property_info(properties, 3, "ctor_count", true, CtorCountGetterWrap, CtorCountSetterWrap, NULL, NULL, NULL);
+        pesapi_set_method_info(properties, 4, "GetSelf", false, GetSelfWrap, NULL, NULL);
         pesapi_define_class(typeId, NULL, "TestStruct", TestStructCtor, TestStructFinalize, properties_count, properties, NULL);
     }
 
@@ -423,6 +433,27 @@ TEST_F(PApiBaseTest, VariableAccess) {
     EXPECT_EQ(999, TestStruct::ctor_count);
     ASSERT_TRUE(apis->is_int32(env, ret));
     ASSERT_TRUE(apis->get_value_int32(env, ret) == 101);
+}
+
+TEST_F(PApiBaseTest, ReturnAObject) {
+    auto env = apis->get_env_from_ref(env_ref);
+
+    auto code = R"(
+                (function() {
+                    const TestStruct = loadClass('TestStruct');
+                    const obj = new TestStruct(123);
+                    const self = obj.GetSelf();
+                    return obj == self;
+                })();
+              )";
+    auto ret = apis->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
+    if (apis->has_caught(scope))
+    {
+        printf("%s\n", apis->get_exception_as_string(scope, true));
+    }
+    ASSERT_FALSE(apis->has_caught(scope));
+    ASSERT_TRUE(apis->is_boolean(env, ret));
+    ASSERT_TRUE(apis->get_value_bool(env, ret));
 }
 
 

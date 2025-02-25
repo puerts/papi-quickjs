@@ -83,7 +83,7 @@ void PApiObjectFinalizer(JSRuntime* rt, JSValue val)
     js_free_rt(rt, object_udata);
 }
 
-void CppObjectMapper::AddToCache(const puerts::JSClassDefinition* typeInfo, const void* ptr, JSValue value, bool callFinalize)
+void CppObjectMapper::BindAndAddToCache(const puerts::JSClassDefinition* typeInfo, const void* ptr, JSValue value, bool callFinalize)
 {
     ObjectUserData* object_udata = (ObjectUserData*)js_malloc(ctx, sizeof(ObjectUserData));
     object_udata->typeInfo = typeInfo;
@@ -117,6 +117,40 @@ void CppObjectMapper::RemoveFromCache(const puerts::JSClassDefinition* typeInfo,
             CDataCache.erase(ptr);
         }
     }
+}
+
+JSValue CppObjectMapper::PushNativeObject(const void* TypeId, void* ObjectPtr, bool callFinalize)
+{
+    if (!ObjectPtr)
+    {
+        return JS_UNDEFINED;
+    }
+
+    if (!callFinalize)
+    {
+        auto Iter = CDataCache.find(ObjectPtr);
+        if (Iter != CDataCache.end())
+        {
+            auto CacheNodePtr = Iter->second.Find(TypeId);
+            if (CacheNodePtr)
+            {
+                return JS_DupValue(ctx, CacheNodePtr->Value);
+            }
+        }
+    }
+
+    auto ClassDefinition = puerts::FindClassByID(TypeId);
+    if (!ClassDefinition)
+    {
+        ClassDefinition = &PtrClassDef;
+    }
+    JSValue ctor = CreateClass(ClassDefinition);
+    JSValue proto = JS_GetProperty(ctx, ctor, JS_ATOM_prototype);
+    JSValue obj = JS_NewObjectProtoClass(ctx, proto, classId);
+    JS_FreeValue(ctx, proto);
+    BindAndAddToCache(ClassDefinition, ObjectPtr, obj, callFinalize);
+
+    return obj;
 }
 
 JSValue CppObjectMapper::MakeMethod(pesapi_callback Callback, void* Data)
@@ -204,7 +238,7 @@ JSValue CppObjectMapper::CreateClass(const puerts::JSClassDefinition* ClassDefin
                 callbackInfo.this_val = JS_NewObjectProtoClass(ctx, proto, mapper->classId);
                 JS_FreeValue(ctx, proto);
                 void* ptr = clsDef->Initialize(&g_pesapi_ffi, &callbackInfo);
-                mapper->AddToCache(clsDef, ptr, callbackInfo.this_val, true);
+                mapper->BindAndAddToCache(clsDef, ptr, callbackInfo.this_val, true);
                 if (JS_IsException(callbackInfo.res))
                 {
                     JS_FreeValue(ctx, callbackInfo.this_val);
@@ -315,6 +349,9 @@ void CppObjectMapper::Initialize(JSContext* ctx_)
     funcTracerClassId = 0;
     JS_NewClassID(rt, &funcTracerClassId);
     JS_NewClass(rt, funcTracerClassId, &func_tracer_cls_def);
+
+    PtrClassDef.TypeId = &PtrClassDef;
+    PtrClassDef.ScriptName = "__Pointer";
 }
 
 void CppObjectMapper::Cleanup()

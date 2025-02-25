@@ -50,6 +50,8 @@ struct CppObjectMapper
     const void* envPrivate = nullptr;
     eastl::shared_ptr<int> ref = eastl::allocate_shared<int>(eastl::allocator_malloc("shared_ptr"), 0);
 
+    puerts::JSClassDefinition PtrClassDef = JSClassEmptyDefinition;
+
     inline static eastl::weak_ptr<int> GetEnvLifeCycleTracker(JSContext* ctx)
     {
         JSRuntime* rt = JS_GetRuntime(ctx);
@@ -90,9 +92,11 @@ struct CppObjectMapper
 
     JSValue CreateClass(const puerts::JSClassDefinition* ClassDefinition);
 
-    void AddToCache(const puerts::JSClassDefinition* typeInfo, const void* ptr, JSValue value, bool callFinalize);
+    void BindAndAddToCache(const puerts::JSClassDefinition* typeInfo, const void* ptr, JSValue value, bool callFinalize);
 
     void RemoveFromCache(const puerts::JSClassDefinition* typeInfo, const void* ptr);
+
+    JSValue PushNativeObject(const void* TypeId, void* ObjectPtr, bool callFinalize);
 };
 
 }  // namespace qjsimpl
