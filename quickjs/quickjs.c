@@ -3177,7 +3177,9 @@ JSValue JS_NewSymbol(JSContext *ctx, const char *description, JS_BOOL is_global)
     JSAtom atom = JS_NewAtom(ctx, description);
     if (atom == JS_ATOM_NULL)
         return JS_EXCEPTION;
-    return JS_NewSymbolFromAtom(ctx, atom, is_global ? JS_ATOM_TYPE_GLOBAL_SYMBOL : JS_ATOM_TYPE_SYMBOL);
+    JSValue res = JS_NewSymbolFromAtom(ctx, atom, is_global ? JS_ATOM_TYPE_GLOBAL_SYMBOL : JS_ATOM_TYPE_SYMBOL);
+    JS_FreeAtom(ctx, atom);
+    return res;
 }
 
 #define ATOM_GET_STR_BUF_SIZE 64
