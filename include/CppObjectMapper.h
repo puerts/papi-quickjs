@@ -71,6 +71,8 @@ struct CppObjectMapper
 
     static JSValue CreateError(JSContext* ctx, const char* message);
 
+    void CreateMethod(puerts::JSFunctionInfo* FunctionInfo, JSValue Obj);
+
     JSValue CreateClass(const puerts::JSClassDefinition* ClassDefinition);
 
     void AddToCache(const puerts::JSClassDefinition* typeInfo, const void* ptr, JSValue value, bool callFinalize);

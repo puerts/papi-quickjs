@@ -23,6 +23,14 @@ struct TestStruct {
         dtor_count++;
         lastDtorObject = this;
     }
+
+    int Calc(int x, int y) {
+        return a + x + y;
+    }
+
+    static int Add(int x, int y) {
+        return x + y;
+    }
 };
 
 int TestStruct::ctor_count = 0;
@@ -30,7 +38,7 @@ int TestStruct::dtor_count = 0;
 TestStruct* TestStruct::lastCtorObject = nullptr;
 TestStruct* TestStruct::lastDtorObject = nullptr;
 
-void* TestStructCtor(struct pesapi_ffi* apis, pesapi_callback_info info)
+static void* TestStructCtor(struct pesapi_ffi* apis, pesapi_callback_info info)
 {
     auto env = apis->get_env(info);
     auto p0 = apis->get_arg(info, 0);
@@ -38,16 +46,29 @@ void* TestStructCtor(struct pesapi_ffi* apis, pesapi_callback_info info)
     return new TestStruct(a);
 }
 
-void TestStructFinalize(struct pesapi_ffi* apis, void* ptr, void* class_data, void* env_private)
+static void TestStructFinalize(struct pesapi_ffi* apis, void* ptr, void* class_data, void* env_private)
 {
     delete (TestStruct*)ptr;
+}
+
+static void AddWrap(struct pesapi_ffi* apis, pesapi_callback_info info)
+{
+    auto env = apis->get_env(info);
+    auto p0 = apis->get_arg(info, 0);
+    auto p1 = apis->get_arg(info, 1);
+    int a = apis->get_value_int32(env, p0);
+    int b = apis->get_value_int32(env, p1);
+    apis->add_return(info, apis->create_int32(env, TestStruct::Add(a, b)));
 }
 
 class PApiBaseTest : public ::testing::Test {
 public:
     static void SetUpTestCase() { 
         const void* typeId = "TestStruct";
-        pesapi_define_class(typeId, NULL, "TestStruct", TestStructCtor, TestStructFinalize, 0, NULL, NULL);
+        const int properties_count = 1;
+        pesapi_property_descriptor properties = pesapi_alloc_property_descriptors(properties_count);
+        pesapi_set_method_info(properties, 0, "Add", true, AddWrap, NULL, NULL);
+        pesapi_define_class(typeId, NULL, "TestStruct", TestStructCtor, TestStructFinalize, properties_count, properties, NULL);
     }
 
     static void TearDownTestCase() {
@@ -277,6 +298,28 @@ TEST_F(PApiBaseTest, ClassCtorFinalize) {
     ASSERT_EQ(TestStruct::dtor_count, 1);
     ASSERT_EQ(TestStruct::lastCtorObject, TestStruct::lastDtorObject);
 
+
+    apis->close_scope(scope);
+}
+
+TEST_F(PApiBaseTest, StaticFunctionCall) {
+    auto scope = apis->open_scope(env_ref);
+    auto env = apis->get_env_from_ref(env_ref);
+
+    auto code = R"(
+                (function() {
+                    const TestStruct = loadClass('TestStruct');
+                    return TestStruct.Add(123, 456);
+                })();
+              )";
+    auto ret = apis->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
+    if (apis->has_caught(scope))
+    {
+        printf("%s\n", apis->get_exception_as_string(scope, true));
+    }
+    ASSERT_FALSE(apis->has_caught(scope));
+    ASSERT_TRUE(apis->is_int32(env, ret));
+    ASSERT_TRUE(apis->get_value_int32(env, ret) == 579);
 
     apis->close_scope(scope);
 }

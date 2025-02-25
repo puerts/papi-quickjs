@@ -126,35 +126,40 @@ void CppObjectMapper::RemoveFromCache(const puerts::JSClassDefinition* typeInfo,
     }
 }
 
+void CppObjectMapper::CreateMethod(puerts::JSFunctionInfo* FunctionInfo, JSValue Obj)
+{
+    JSValue method_data[2] {
+            JS_MKPTR(JS_TAG_EXTERNAL, (void*)FunctionInfo),
+            JS_MKPTR(JS_TAG_EXTERNAL, this)
+            };
+
+    JSValue func = JS_NewCFunctionData(ctx, [](JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, int magic, JSValue *method_data) -> JSValue {
+        const puerts::JSFunctionInfo* funcInfo = (const puerts::JSFunctionInfo*)(JS_VALUE_GET_PTR(method_data[0]));
+        CppObjectMapper* mapper = (CppObjectMapper*)(JS_VALUE_GET_PTR(method_data[1]));
+        
+        pesapi_callback_info__ callbackInfo  { ctx, this_val, argc, argv, JS_VALUE_GET_PTR(method_data[1]), JS_UNDEFINED, JS_UNDEFINED };
+        funcInfo->Callback(&g_pesapi_ffi, &callbackInfo);
+        if (JS_IsException(callbackInfo.res))
+        {
+            JS_FreeValue(ctx, callbackInfo.res);
+            return JS_Throw(ctx, callbackInfo.ex);
+        }
+        else
+        {
+            return callbackInfo.res;
+        }
+    }, 0, 0, 2, &method_data[0]);
+
+    JSAtom methodName = JS_NewAtom(ctx, FunctionInfo->Name);
+    JS_DefinePropertyValue(ctx, Obj, methodName, func, JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE | JS_PROP_WRITABLE);
+    JS_FreeAtom(ctx, methodName);
+}
+
 JSValue CppObjectMapper::CreateClass(const puerts::JSClassDefinition* ClassDefinition)
 {
     auto it = TypeIdToFunctionMap.find(ClassDefinition->TypeId);
     if (it == TypeIdToFunctionMap.end())
     {
-        puerts::JSPropertyInfo* PropertyInfo = ClassDefinition->Properties;
-        while (PropertyInfo && PropertyInfo->Name)
-        {
-            ++PropertyInfo;
-        }
-
-        PropertyInfo = ClassDefinition->Variables;
-        while (PropertyInfo && PropertyInfo->Name)
-        {
-            ++PropertyInfo;
-        }
-
-        puerts::JSFunctionInfo* FunctionInfo = ClassDefinition->Methods;
-        while (FunctionInfo && FunctionInfo->Name && FunctionInfo->Callback)
-        {
-            ++FunctionInfo;
-        }
-
-        FunctionInfo = ClassDefinition->Functions;
-        while (FunctionInfo && FunctionInfo->Name && FunctionInfo->Callback)
-        {
-            ++FunctionInfo;
-        }
-
         JSValue ctor_data[2] {
             JS_MKPTR(JS_TAG_EXTERNAL, (void*)ClassDefinition),
             JS_MKPTR(JS_TAG_EXTERNAL, this)
@@ -199,6 +204,31 @@ JSValue CppObjectMapper::CreateClass(const puerts::JSClassDefinition* ClassDefin
             JS_PROP_CONFIGURABLE
         );
         JS_FreeAtom(ctx, clsName);
+
+        puerts::JSPropertyInfo* PropertyInfo = ClassDefinition->Properties;
+        while (PropertyInfo && PropertyInfo->Name)
+        {
+            ++PropertyInfo;
+        }
+
+        PropertyInfo = ClassDefinition->Variables;
+        while (PropertyInfo && PropertyInfo->Name)
+        {
+            ++PropertyInfo;
+        }
+
+        puerts::JSFunctionInfo* FunctionInfo = ClassDefinition->Methods;
+        while (FunctionInfo && FunctionInfo->Name && FunctionInfo->Callback)
+        {
+            ++FunctionInfo;
+        }
+
+        FunctionInfo = ClassDefinition->Functions;
+        while (FunctionInfo && FunctionInfo->Name && FunctionInfo->Callback)
+        {
+            CreateMethod(FunctionInfo, func);
+            ++FunctionInfo;
+        }
 
         TypeIdToFunctionMap[ClassDefinition->TypeId] = func;
         JS_DupValue(ctx, func); //JS_FreeValue in Cleanup
