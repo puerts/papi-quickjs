@@ -68,7 +68,7 @@ if(MSVC)
     xcheck_add_c_compiler_flag(/wd4996) # -Wdeprecated-declarations
     xcheck_add_c_compiler_flag(/wd5045) # Compiler will insert Spectre mitigation for memory load if /Qspectre switch specified
     xcheck_add_c_compiler_flag(/wd4514)
-    xcheck_add_c_compiler_flag(/wd4514)
+    xcheck_add_c_compiler_flag(/wd4146)
     xcheck_add_c_compiler_flag(-fchar8_t)
     xcheck_add_c_compiler_flag(/Zc:char8_t)
 endif()
@@ -193,15 +193,10 @@ target_compile_options(PapiQjs PRIVATE
         -fno-rtti
     >
     $<$<CXX_COMPILER_ID:MSVC>:
-        /EHa-
-        /EHsc
-        /EHsc-
-        /GR-  # 禁用RTTI
+        /EHa-  # 禁用异常处理
+        /GR-   # 禁用RTTI
     >
 )
-#if(MSVC)
-#target_compile_options(PapiQjs PRIVATE /EHsc)
-#endif()
 
 target_compile_definitions(PapiRegister PUBLIC BUILDING_REGISTER_API_SHARED)
 target_compile_options(PapiRegister PRIVATE
@@ -213,7 +208,6 @@ target_compile_options(PapiRegister PRIVATE
     >
     $<$<CXX_COMPILER_ID:MSVC>:
         /EHa-
-        /EHsc-
         /GR-  # 禁用RTTI
     >
 )
