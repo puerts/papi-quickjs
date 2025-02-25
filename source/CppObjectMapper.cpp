@@ -119,19 +119,20 @@ void CppObjectMapper::RemoveFromCache(const puerts::JSClassDefinition* typeInfo,
     }
 }
 
-void CppObjectMapper::CreateMethod(puerts::JSFunctionInfo* FunctionInfo, JSValue Obj)
+void CppObjectMapper::CreateMethod(const char* Name, pesapi_callback Callback, void* Data, JSValue Obj)
 {
-    JSValue method_data[2] {
-            JS_MKPTR(JS_TAG_EXTERNAL, (void*)FunctionInfo),
-            JS_MKPTR(JS_TAG_EXTERNAL, this)
+    JSValue method_data[3] {
+            JS_MKPTR(JS_TAG_EXTERNAL, (void*)Callback),
+            JS_MKPTR(JS_TAG_EXTERNAL, this),
+             JS_MKPTR(JS_TAG_EXTERNAL, Data)
             };
 
     JSValue func = JS_NewCFunctionData(ctx, [](JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, int magic, JSValue *method_data) -> JSValue {
-        const puerts::JSFunctionInfo* funcInfo = (const puerts::JSFunctionInfo*)(JS_VALUE_GET_PTR(method_data[0]));
+        pesapi_callback callback = (pesapi_callback)(JS_VALUE_GET_PTR(method_data[0]));
         CppObjectMapper* mapper = (CppObjectMapper*)(JS_VALUE_GET_PTR(method_data[1]));
         
-        pesapi_callback_info__ callbackInfo  { ctx, this_val, argc, argv, JS_VALUE_GET_PTR(method_data[1]), JS_UNDEFINED, JS_UNDEFINED };
-        funcInfo->Callback(&g_pesapi_ffi, &callbackInfo);
+        pesapi_callback_info__ callbackInfo  { ctx, this_val, argc, argv, JS_VALUE_GET_PTR(method_data[2]), JS_UNDEFINED, JS_UNDEFINED };
+        callback(&g_pesapi_ffi, &callbackInfo);
         if (JS_IsException(callbackInfo.res))
         {
             JS_FreeValue(ctx, callbackInfo.res);
@@ -141,9 +142,9 @@ void CppObjectMapper::CreateMethod(puerts::JSFunctionInfo* FunctionInfo, JSValue
         {
             return callbackInfo.res;
         }
-    }, 0, 0, 2, &method_data[0]);
+    }, 0, 0, 3, &method_data[0]);
 
-    JSAtom methodName = JS_NewAtom(ctx, FunctionInfo->Name);
+    JSAtom methodName = JS_NewAtom(ctx, Name);
     JS_DefinePropertyValue(ctx, Obj, methodName, func, JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE | JS_PROP_WRITABLE);
     JS_FreeAtom(ctx, methodName);
 }
@@ -153,9 +154,10 @@ JSValue CppObjectMapper::CreateClass(const puerts::JSClassDefinition* ClassDefin
     auto it = TypeIdToFunctionMap.find(ClassDefinition->TypeId);
     if (it == TypeIdToFunctionMap.end())
     {
-        JSValue ctor_data[2] {
+        JSValue ctor_data[3] {
             JS_MKPTR(JS_TAG_EXTERNAL, (void*)ClassDefinition),
-            JS_MKPTR(JS_TAG_EXTERNAL, this)
+            JS_MKPTR(JS_TAG_EXTERNAL, this),
+            JS_MKPTR(JS_TAG_EXTERNAL, ClassDefinition->Data)
             };
 
         JSValue func = JS_NewCFunctionData(ctx, [](JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, int magic, JSValue *ctor_data) -> JSValue {
@@ -164,7 +166,7 @@ JSValue CppObjectMapper::CreateClass(const puerts::JSClassDefinition* ClassDefin
             
             if (clsDef->Initialize)
             {
-                pesapi_callback_info__ callbackInfo  { ctx, this_val, argc, argv, JS_VALUE_GET_PTR(ctor_data[1]), JS_UNDEFINED, JS_UNDEFINED };
+                pesapi_callback_info__ callbackInfo  { ctx, this_val, argc, argv, JS_VALUE_GET_PTR(ctor_data[2]), JS_UNDEFINED, JS_UNDEFINED };
                 JSValue proto = JS_GetProperty(ctx, this_val, JS_ATOM_prototype);
                 callbackInfo.this_val = JS_NewObjectProtoClass(ctx, proto, mapper->classId);
                 JS_FreeValue(ctx, proto);
@@ -184,7 +186,7 @@ JSValue CppObjectMapper::CreateClass(const puerts::JSClassDefinition* ClassDefin
             {
                 return JS_Throw(ctx, CppObjectMapper::CreateError(ctx, "no initialize function"));
             }
-        }, 0, 0, 2, &ctor_data[0]);
+        }, 0, 0, 3, &ctor_data[0]);
 
         JS_SetConstructorBit(ctx, func, 1);
 
@@ -215,14 +217,14 @@ JSValue CppObjectMapper::CreateClass(const puerts::JSClassDefinition* ClassDefin
         puerts::JSFunctionInfo* FunctionInfo = ClassDefinition->Methods;
         while (FunctionInfo && FunctionInfo->Name && FunctionInfo->Callback)
         {
-            CreateMethod(FunctionInfo, proto);
+            CreateMethod(FunctionInfo->Name, FunctionInfo->Callback, FunctionInfo->Data, proto);
             ++FunctionInfo;
         }
 
         FunctionInfo = ClassDefinition->Functions;
         while (FunctionInfo && FunctionInfo->Name && FunctionInfo->Callback)
         {
-            CreateMethod(FunctionInfo, func);
+            CreateMethod(FunctionInfo->Name, FunctionInfo->Callback, FunctionInfo->Data, func);
             ++FunctionInfo;
         }
 

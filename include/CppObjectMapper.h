@@ -84,7 +84,7 @@ struct CppObjectMapper
 
     static JSValue CreateError(JSContext* ctx, const char* message);
 
-    void CreateMethod(puerts::JSFunctionInfo* FunctionInfo, JSValue Obj);
+    void CreateMethod(const char* Name, pesapi_callback Callback, void* Data, JSValue Obj);
 
     JSValue CreateClass(const puerts::JSClassDefinition* ClassDefinition);
 
