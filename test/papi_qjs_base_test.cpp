@@ -61,13 +61,27 @@ static void AddWrap(struct pesapi_ffi* apis, pesapi_callback_info info)
     apis->add_return(info, apis->create_int32(env, TestStruct::Add(a, b)));
 }
 
+
+static void CalcWrap(struct pesapi_ffi* apis, pesapi_callback_info info)
+{
+    auto env = apis->get_env(info);
+    auto self = apis->get_this(info);
+    auto obj = (TestStruct*)apis->get_native_object_ptr(env, self);
+    auto p0 = apis->get_arg(info, 0);
+    auto p1 = apis->get_arg(info, 1);
+    int a = apis->get_value_int32(env, p0);
+    int b = apis->get_value_int32(env, p1);
+    apis->add_return(info, apis->create_int32(env, obj->Calc(a, b)));
+}
+
 class PApiBaseTest : public ::testing::Test {
 public:
     static void SetUpTestCase() { 
         const void* typeId = "TestStruct";
-        const int properties_count = 1;
+        const int properties_count = 2;
         pesapi_property_descriptor properties = pesapi_alloc_property_descriptors(properties_count);
         pesapi_set_method_info(properties, 0, "Add", true, AddWrap, NULL, NULL);
+        pesapi_set_method_info(properties, 1, "Calc", false, CalcWrap, NULL, NULL);
         pesapi_define_class(typeId, NULL, "TestStruct", TestStructCtor, TestStructFinalize, properties_count, properties, NULL);
     }
 
@@ -106,12 +120,14 @@ protected:
         env_ref = create_qjs_env();
         apis = get_papi_ffi();
 
-        auto scope = apis->open_scope(env_ref);
+        scope = apis->open_scope(env_ref);
         auto env = apis->get_env_from_ref(env_ref);
 
         auto g = apis->global(env);
         apis->set_property(env, g, "loadClass", apis->create_function(env, LoadClass, this, nullptr));
         apis->close_scope(scope);
+
+        scope = apis->open_scope(env_ref);
     }
 
     static void LoadClass(struct pesapi_ffi* apis, pesapi_callback_info info)
@@ -137,6 +153,7 @@ protected:
     }
 
     void TearDown() override {
+        apis->close_scope(scope);
         //printf("TearDown\n");
         if (env_ref) {
             destroy_qjs_env(env_ref);
@@ -145,6 +162,7 @@ protected:
 
     pesapi_env_ref env_ref;
     struct pesapi_ffi* apis;
+    pesapi_scope scope;
 };
 
 TEST_F(PApiBaseTest, CreateAndDestroyMultQjsEnv) {
@@ -170,7 +188,6 @@ TEST_F(PApiBaseTest, RegApi) {
 }
 
 TEST_F(PApiBaseTest, EvalJavaScript) {
-    auto scope = apis->open_scope(env_ref);
     auto env = apis->get_env_from_ref(env_ref);
 
     auto code = "123+789";
@@ -178,12 +195,9 @@ TEST_F(PApiBaseTest, EvalJavaScript) {
     ASSERT_TRUE(ret != nullptr);
     ASSERT_TRUE(apis->is_int32(env, ret));
     ASSERT_TRUE(apis->get_value_int32(env, ret) == 912);
-
-    apis->close_scope(scope);
 }
 
 TEST_F(PApiBaseTest, EvalJavaScriptEx) {
-    auto scope = apis->open_scope(env_ref);
     auto env = apis->get_env_from_ref(env_ref);
 
     auto code = " (function() { throw new Error('abc'); }) ();";
@@ -192,12 +206,9 @@ TEST_F(PApiBaseTest, EvalJavaScriptEx) {
 
     EXPECT_STREQ("Error: abc", apis->get_exception_as_string(scope, false));
     EXPECT_STREQ("Error: abc\n    at <anonymous> (test.js:1:21)\n    at <eval> (test.js:1:42)\n", apis->get_exception_as_string(scope, true));
-
-    apis->close_scope(scope);
 }
 
 TEST_F(PApiBaseTest, SetToGlobal) {
-    auto scope = apis->open_scope(env_ref);
     auto env = apis->get_env_from_ref(env_ref);
 
     auto g = apis->global(env);
@@ -208,13 +219,11 @@ TEST_F(PApiBaseTest, SetToGlobal) {
     ASSERT_TRUE(ret != nullptr);
     ASSERT_TRUE(apis->is_int32(env, ret));
     ASSERT_TRUE(apis->get_value_int32(env, ret) == 123);
-
-    apis->close_scope(scope);
 }
 
 
 TEST_F(PApiBaseTest, CreateJsFunction) {
-    auto scope = apis->open_scope(env_ref);
+    auto scope = apis->open_scope(env_ref); // 为了可以提前释放
     auto env = apis->get_env_from_ref(env_ref);
 
     auto g = apis->global(env);
@@ -243,7 +252,6 @@ TEST_F(PApiBaseTest, CreateJsFunction) {
 
 
 TEST_F(PApiBaseTest, PropertyGetSet) {
-    auto scope = apis->open_scope(env_ref);
     auto env = apis->get_env_from_ref(env_ref);
 
     auto g = apis->global(env);
@@ -268,12 +276,9 @@ TEST_F(PApiBaseTest, PropertyGetSet) {
     buff[3] = 0;
     apis->get_value_string_utf8(env, str, buff, &len);
     EXPECT_STREQ("888", buff);
-
-    apis->close_scope(scope);
 }
 
 TEST_F(PApiBaseTest, ClassCtorFinalize) {
-    auto scope = apis->open_scope(env_ref);
     auto env = apis->get_env_from_ref(env_ref);
 
     TestStruct::ctor_count = 0;
@@ -297,13 +302,9 @@ TEST_F(PApiBaseTest, ClassCtorFinalize) {
     ASSERT_EQ(TestStruct::ctor_count, 1);
     ASSERT_EQ(TestStruct::dtor_count, 1);
     ASSERT_EQ(TestStruct::lastCtorObject, TestStruct::lastDtorObject);
-
-
-    apis->close_scope(scope);
 }
 
 TEST_F(PApiBaseTest, StaticFunctionCall) {
-    auto scope = apis->open_scope(env_ref);
     auto env = apis->get_env_from_ref(env_ref);
 
     auto code = R"(
@@ -320,8 +321,26 @@ TEST_F(PApiBaseTest, StaticFunctionCall) {
     ASSERT_FALSE(apis->has_caught(scope));
     ASSERT_TRUE(apis->is_int32(env, ret));
     ASSERT_TRUE(apis->get_value_int32(env, ret) == 579);
+}
 
-    apis->close_scope(scope);
+TEST_F(PApiBaseTest, InstanceMethodCall) {
+    auto env = apis->get_env_from_ref(env_ref);
+
+    auto code = R"(
+                (function() {
+                    const TestStruct = loadClass('TestStruct');
+                    const obj = new TestStruct(123);
+                    return obj.Calc(123, 456);
+                })();
+              )";
+    auto ret = apis->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
+    if (apis->has_caught(scope))
+    {
+        printf("%s\n", apis->get_exception_as_string(scope, true));
+    }
+    ASSERT_FALSE(apis->has_caught(scope));
+    //ASSERT_TRUE(apis->is_int32(env, ret));
+    //ASSERT_TRUE(apis->get_value_int32(env, ret) == 702);
 }
 
 
