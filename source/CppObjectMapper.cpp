@@ -190,6 +190,16 @@ JSValue CppObjectMapper::CreateClass(const puerts::JSClassDefinition* ClassDefin
 
         JS_SetConstructorBit(ctx, func, 1);
 
+        auto clsName = JS_NewAtom(ctx, ClassDefinition->ScriptName);
+        JS_DefinePropertyValue( 
+            ctx, 
+            func, 
+            JS_ATOM_name,
+            JS_AtomToString(ctx, clsName), 
+            JS_PROP_CONFIGURABLE
+        );
+        JS_FreeAtom(ctx, clsName);
+
         TypeIdToFunctionMap[ClassDefinition->TypeId] = func;
         JS_DupValue(ctx, func); //JS_FreeValue in Cleanup
         return func;
