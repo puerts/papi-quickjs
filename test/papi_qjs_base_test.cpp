@@ -58,7 +58,6 @@ protected:
             char buff[1024];
             size_t len = sizeof(buff);
             const char* className = apis->get_value_string_utf8(env, arg0, buff, &len);
-            printf("LoadClass className: %s\n", className);
             auto clsDef = puerts::FindCppTypeClassByName(className);
             if (clsDef)
             {
@@ -209,16 +208,27 @@ TEST_F(PApiBaseTest, PropertyGetSet) {
 }
 
 struct TestStruct {
+    static int ctor_count;
+    static int dtor_count;
+    static TestStruct* lastCtorObject;
+    static TestStruct* lastDtorObject;
     TestStruct(int a) {
-        printf("TestStruct ctor: %d, %p\n", a, this);
         this->a = a;
+        ctor_count++;
+        lastCtorObject = this;
     }
 
     int a;
     ~TestStruct() {
-        printf("TestStruct dtor: %d, %p\n", a, this);
+        dtor_count++;
+        lastDtorObject = this;
     }
 };
+
+int TestStruct::ctor_count = 0;
+int TestStruct::dtor_count = 0;
+TestStruct* TestStruct::lastCtorObject = nullptr;
+TestStruct* TestStruct::lastDtorObject = nullptr;
 
 void* TestStructCtor(struct pesapi_ffi* apis, pesapi_callback_info info)
 {
@@ -241,6 +251,11 @@ TEST_F(PApiBaseTest, ClassCtorFinalize) {
 
     pesapi_define_class(typeId, NULL, "TestStruct", TestStructCtor, TestStructFinalize, 0, NULL, NULL);
 
+    TestStruct::ctor_count = 0;
+    TestStruct::dtor_count = 0;
+    TestStruct::lastCtorObject = nullptr;
+    TestStruct::lastDtorObject = nullptr;
+
     auto code = R"(
                 (function() {
                     const TestStruct = loadClass('TestStruct');
@@ -253,6 +268,11 @@ TEST_F(PApiBaseTest, ClassCtorFinalize) {
         printf("%s\n", api->get_exception_as_string(scope, true));
     }
     ASSERT_FALSE(api->has_caught(scope));
+
+    ASSERT_EQ(TestStruct::ctor_count, 1);
+    ASSERT_EQ(TestStruct::dtor_count, 1);
+    ASSERT_EQ(TestStruct::lastCtorObject, TestStruct::lastDtorObject);
+
 
     api->close_scope(scope);
 }
