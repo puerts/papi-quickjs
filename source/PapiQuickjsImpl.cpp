@@ -405,7 +405,7 @@ const void* pesapi_get_native_object_typeid(pesapi_env env, pesapi_value pvalue)
 
 bool pesapi_is_instance_of(pesapi_env env, const void* type_id, pesapi_value pvalue)
 {
-    return false;
+    return pesapi_get_native_object_typeid(env, pvalue) == type_id; // TODO: api 不正交
 }
 
 pesapi_value pesapi_boxing(pesapi_env env, pesapi_value pvalue)
