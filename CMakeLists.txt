@@ -69,6 +69,7 @@ if(MSVC)
     xcheck_add_c_compiler_flag(/wd5045) # Compiler will insert Spectre mitigation for memory load if /Qspectre switch specified
     xcheck_add_c_compiler_flag(/wd4514)
     xcheck_add_c_compiler_flag(/wd4146)
+    xcheck_add_c_compiler_flag(/wd4334)
     xcheck_add_c_compiler_flag(-fchar8_t)
     xcheck_add_c_compiler_flag(/Zc:char8_t)
 endif()
