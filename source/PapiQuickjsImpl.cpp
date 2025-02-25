@@ -750,7 +750,7 @@ pesapi_value pesapi_call_function(pesapi_env env, pesapi_value pfunc, pesapi_val
 {
     auto ctx = qjsContextFromPesapiEnv(env);
     JSValue* func = qjsValueFromPesapiValue(pfunc);
-    JSValue* thisObj = qjsValueFromPesapiValue(this_object);
+    JSValue* thisObj = this_object ? qjsValueFromPesapiValue(this_object) : &literal_values_undefined;
     JSValue *js_argv = (JSValue*)alloca(argc * sizeof(JSValue));
     for (int i = 0; i < argc; ++i) {
         js_argv[i] = *qjsValueFromPesapiValue(argv[i]);

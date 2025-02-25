@@ -495,6 +495,27 @@ TEST_F(PApiBaseTest, RefArgument) {
     EXPECT_EQ(5, apis->get_value_int32(env, ret));
 }
 
+TEST_F(PApiBaseTest, CallFunction) {
+    auto env = apis->get_env_from_ref(env_ref);
+
+    auto code = R"(
+                function sub(x, y) {
+                    return x - y;
+                }
+                sub;
+              )";
+    auto ret = apis->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
+    if (apis->has_caught(scope))
+    {
+        printf("%s\n", apis->get_exception_as_string(scope, true));
+    }
+    ASSERT_FALSE(apis->has_caught(scope));
+    ASSERT_TRUE(apis->is_function(env, ret));
+    pesapi_value argv[2] {apis->create_int32(env, 5), apis->create_int32(env, 3)};
+    auto func_call_ret = apis->call_function(env, ret, nullptr, 2, argv);
+    ASSERT_TRUE(apis->is_int32(env, func_call_ret));
+    EXPECT_EQ(2, apis->get_value_int32(env, func_call_ret));
+}
 
 } // namespace qjsimpl
 } // namespace pesapi
