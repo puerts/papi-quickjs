@@ -397,7 +397,10 @@ void* pesapi_get_native_object_ptr(pesapi_env env, pesapi_value pvalue)
 
 const void* pesapi_get_native_object_typeid(pesapi_env env, pesapi_value pvalue)
 {
-    return {};
+    auto ctx = qjsContextFromPesapiEnv(env);
+    auto mapper = pesapi::qjsimpl::CppObjectMapper::Get(ctx);
+    auto value = qjsValueFromPesapiValue(pvalue);
+    return mapper->GetNativeObjectTypeId(*value);
 }
 
 bool pesapi_is_instance_of(pesapi_env env, const void* type_id, pesapi_value pvalue)

@@ -80,6 +80,12 @@ struct CppObjectMapper
         return object_udata ? object_udata->ptr : nullptr;
     }
 
+    inline const void* GetNativeObjectTypeId(JSValue val)
+    {
+        ObjectUserData* object_udata = (ObjectUserData*)JS_GetOpaque(val, classId);
+        return object_udata ? object_udata->typeInfo->TypeId : nullptr;
+    }
+
     JSValue CreateFunction(pesapi_callback Callback, void* Data, pesapi_function_finalize Finalize);
 
     JSValue CreateClassByID(const void* typeId);
