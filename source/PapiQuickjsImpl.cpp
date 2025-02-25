@@ -410,16 +410,43 @@ bool pesapi_is_instance_of(pesapi_env env, const void* type_id, pesapi_value pva
 
 pesapi_value pesapi_boxing(pesapi_env env, pesapi_value pvalue)
 {
-    return {};
+    auto ctx = qjsContextFromPesapiEnv(env);
+    JSValue* boxed_value = allocValueInCurrentScope(ctx);
+    *boxed_value = JS_NewObject(ctx);
+    JSValue* val = qjsValueFromPesapiValue(pvalue);
+    if (JS_VALUE_HAS_REF_COUNT(*val)) {
+        JS_DupValue(ctx, *val);
+    }
+    JS_SetPropertyUint32(ctx, *boxed_value, 0, *val);
+    return pesapiValueFromQjsValue(boxed_value);
 }
 
-pesapi_value pesapi_unboxing(pesapi_env env, pesapi_value pvalue)
+pesapi_value pesapi_unboxing(pesapi_env env, pesapi_value p_boxed_value)
 {
-    return {};
+    auto ctx = qjsContextFromPesapiEnv(env);
+    JSValue* boxed_value = qjsValueFromPesapiValue(p_boxed_value);
+    if (!boxed_value || !JS_IsObject(*boxed_value))
+    {
+        return pesapiValueFromQjsValue(&literal_values_undefined);
+    }
+    JSValue* ret = allocValueInCurrentScope(ctx);
+    *ret = JS_GetPropertyUint32(ctx, *boxed_value, 0);
+    return pesapiValueFromQjsValue(ret);
 }
 
-void pesapi_update_boxed_value(pesapi_env env, pesapi_value boxed_value, pesapi_value pvalue)
+void pesapi_update_boxed_value(pesapi_env env, pesapi_value p_boxed_value, pesapi_value pvalue)
 {
+    auto ctx = qjsContextFromPesapiEnv(env);
+    JSValue* boxed_value = qjsValueFromPesapiValue(p_boxed_value);
+    if (!boxed_value || !JS_IsObject(*boxed_value))
+    {
+        return;
+    }
+    JSValue* val = qjsValueFromPesapiValue(pvalue);
+    if (JS_VALUE_HAS_REF_COUNT(*val)) {
+        JS_DupValue(ctx, *val);
+    }
+    JS_SetPropertyUint32(ctx, *boxed_value, 0, *val);
 }
 
 bool pesapi_is_boxed_value(pesapi_env env, pesapi_value value)
