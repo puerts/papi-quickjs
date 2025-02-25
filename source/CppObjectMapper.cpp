@@ -17,13 +17,6 @@ struct FuncFinalizeData
     CppObjectMapper* mapper;
 };
 
-struct ObjectUserData
-{
-    const puerts::JSClassDefinition* typeInfo;
-    const void* ptr;
-    bool callFinalize;
-};
-
 void PApiFuncFinalizer(JSRuntime* rt, JSValue val)
 {
     CppObjectMapper* mapper = reinterpret_cast<CppObjectMapper*>(JS_GetRuntimeOpaque(rt));
@@ -205,6 +198,8 @@ JSValue CppObjectMapper::CreateClass(const puerts::JSClassDefinition* ClassDefin
         );
         JS_FreeAtom(ctx, clsName);
 
+        JSValue proto = JS_NewObject(ctx);
+
         puerts::JSPropertyInfo* PropertyInfo = ClassDefinition->Properties;
         while (PropertyInfo && PropertyInfo->Name)
         {
@@ -220,6 +215,7 @@ JSValue CppObjectMapper::CreateClass(const puerts::JSClassDefinition* ClassDefin
         puerts::JSFunctionInfo* FunctionInfo = ClassDefinition->Methods;
         while (FunctionInfo && FunctionInfo->Name && FunctionInfo->Callback)
         {
+            CreateMethod(FunctionInfo, proto);
             ++FunctionInfo;
         }
 
@@ -229,6 +225,9 @@ JSValue CppObjectMapper::CreateClass(const puerts::JSClassDefinition* ClassDefin
             CreateMethod(FunctionInfo, func);
             ++FunctionInfo;
         }
+
+        JS_SetConstructor(ctx, func, proto);
+        JS_FreeValue(ctx, proto);
 
         TypeIdToFunctionMap[ClassDefinition->TypeId] = func;
         JS_DupValue(ctx, func); //JS_FreeValue in Cleanup

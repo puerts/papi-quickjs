@@ -13,6 +13,13 @@ namespace pesapi
 namespace qjsimpl
 {
 
+struct ObjectUserData
+{
+    const puerts::JSClassDefinition* typeInfo;
+    const void* ptr;
+    bool callFinalize;
+};
+
 struct CppObjectMapper
 {
     inline static CppObjectMapper* Get(JSContext* ctx)
@@ -43,26 +50,32 @@ struct CppObjectMapper
     const void* envPrivate = nullptr;
     eastl::shared_ptr<int> ref = eastl::allocate_shared<int>(eastl::allocator_malloc("shared_ptr"), 0);
 
-    static eastl::weak_ptr<int> GetEnvLifeCycleTracker(JSContext* ctx)
+    inline static eastl::weak_ptr<int> GetEnvLifeCycleTracker(JSContext* ctx)
     {
         JSRuntime* rt = JS_GetRuntime(ctx);
         CppObjectMapper* mapper = reinterpret_cast<CppObjectMapper*>(JS_GetRuntimeOpaque(rt));
         return mapper->GetEnvLifeCycleTracker();
     }
 
-    eastl::weak_ptr<int> GetEnvLifeCycleTracker()
+    inline eastl::weak_ptr<int> GetEnvLifeCycleTracker()
     {
         return eastl::weak_ptr<int>(ref);
     }
 
-    const void* GetEnvPrivate() const
+    inline const void* GetEnvPrivate() const
     {
         return envPrivate;
     }
 
-    void SetEnvPrivate(const void* envPrivate_)
+    inline void SetEnvPrivate(const void* envPrivate_)
     {
         envPrivate = envPrivate_;
+    }
+
+    inline const void* GetNativeObjectPtr(JSValue val)
+    {
+        ObjectUserData* object_udata = (ObjectUserData*)JS_GetOpaque(val, classId);
+        return object_udata ? object_udata->ptr : nullptr;
     }
 
     JSValue CreateFunction(pesapi_callback Callback, void* Data, pesapi_function_finalize Finalize);
