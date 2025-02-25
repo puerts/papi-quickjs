@@ -61,7 +61,6 @@ static void AddWrap(struct pesapi_ffi* apis, pesapi_callback_info info)
     apis->add_return(info, apis->create_int32(env, TestStruct::Add(a, b)));
 }
 
-
 static void CalcWrap(struct pesapi_ffi* apis, pesapi_callback_info info)
 {
     auto env = apis->get_env(info);
@@ -74,14 +73,32 @@ static void CalcWrap(struct pesapi_ffi* apis, pesapi_callback_info info)
     apis->add_return(info, apis->create_int32(env, obj->Calc(a, b)));
 }
 
+static void AGetterWrap(struct pesapi_ffi* apis, pesapi_callback_info info)
+{
+    auto env = apis->get_env(info);
+    auto self = apis->get_this(info);
+    auto obj = (TestStruct*)apis->get_native_object_ptr(env, self);
+    apis->add_return(info, apis->create_int32(env, obj->a));
+}
+
+static void ASetterWrap(struct pesapi_ffi* apis, pesapi_callback_info info)
+{
+    auto env = apis->get_env(info);
+    auto self = apis->get_this(info);
+    auto obj = (TestStruct*)apis->get_native_object_ptr(env, self);
+    auto p0 = apis->get_arg(info, 0);
+    obj->a = apis->get_value_int32(env, p0);
+}
+
 class PApiBaseTest : public ::testing::Test {
 public:
     static void SetUpTestCase() { 
         const void* typeId = "TestStruct";
-        const int properties_count = 2;
+        const int properties_count = 3;
         pesapi_property_descriptor properties = pesapi_alloc_property_descriptors(properties_count);
         pesapi_set_method_info(properties, 0, "Add", true, AddWrap, NULL, NULL);
         pesapi_set_method_info(properties, 1, "Calc", false, CalcWrap, NULL, NULL);
+        pesapi_set_property_info(properties, 2, "a", false, AGetterWrap, ASetterWrap, NULL, NULL, NULL);
         pesapi_define_class(typeId, NULL, "TestStruct", TestStructCtor, TestStructFinalize, properties_count, properties, NULL);
     }
 
@@ -339,8 +356,35 @@ TEST_F(PApiBaseTest, InstanceMethodCall) {
         printf("%s\n", apis->get_exception_as_string(scope, true));
     }
     ASSERT_FALSE(apis->has_caught(scope));
-    //ASSERT_TRUE(apis->is_int32(env, ret));
-    //ASSERT_TRUE(apis->get_value_int32(env, ret) == 702);
+    ASSERT_TRUE(apis->is_int32(env, ret));
+    ASSERT_TRUE(apis->get_value_int32(env, ret) == 702);
+}
+
+TEST_F(PApiBaseTest, PropertyAccess) {
+    auto env = apis->get_env_from_ref(env_ref);
+
+    auto code = R"(
+                (function() {
+                    const TestStruct = loadClass('TestStruct');
+                    const obj = new TestStruct(123);
+                    let ret = "" + obj.a + ":";
+                    obj.a = 0;
+                    ret += obj.Calc(123, 456);
+                    return ret;
+                })();
+              )";
+    auto ret = apis->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
+    if (apis->has_caught(scope))
+    {
+        printf("%s\n", apis->get_exception_as_string(scope, true));
+    }
+    ASSERT_FALSE(apis->has_caught(scope));
+    ASSERT_TRUE(apis->is_string(env, ret));
+    char buff[1024];
+    size_t len = sizeof(buff);
+    const char* str = apis->get_value_string_utf8(env, ret, buff, &len);
+    //printf("%s, %d\n", str, len);
+    EXPECT_STREQ("123:579", str);
 }
 
 

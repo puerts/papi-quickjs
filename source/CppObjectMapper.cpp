@@ -119,7 +119,7 @@ void CppObjectMapper::RemoveFromCache(const puerts::JSClassDefinition* typeInfo,
     }
 }
 
-void CppObjectMapper::CreateMethod(const char* Name, pesapi_callback Callback, void* Data, JSValue Obj)
+JSValue CppObjectMapper::MakeMethod(pesapi_callback Callback, void* Data)
 {
     JSValue method_data[3] {
             JS_MKPTR(JS_TAG_EXTERNAL, (void*)Callback),
@@ -143,10 +143,43 @@ void CppObjectMapper::CreateMethod(const char* Name, pesapi_callback Callback, v
             return callbackInfo.res;
         }
     }, 0, 0, 3, &method_data[0]);
+    
+    return func;
+}
 
-    JSAtom methodName = JS_NewAtom(ctx, Name);
+void CppObjectMapper::InitMethod(puerts::JSFunctionInfo* FuncInfo, JSValue Obj)
+{
+    JSValue func = MakeMethod(FuncInfo->Callback, FuncInfo->Data);
+
+    JSAtom methodName = JS_NewAtom(ctx, FuncInfo->Name);
     JS_DefinePropertyValue(ctx, Obj, methodName, func, JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE | JS_PROP_WRITABLE);
     JS_FreeAtom(ctx, methodName);
+}
+
+void CppObjectMapper::InitProperty(puerts::JSPropertyInfo* PropInfo, JSValue Obj)
+{
+    JSValue getter = JS_UNDEFINED;
+    JSValue setter = JS_UNDEFINED;
+    int flag = JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE;
+
+    if (PropInfo->Getter)
+    {
+        getter = MakeMethod(PropInfo->Getter, PropInfo->GetterData);
+        flag |= JS_PROP_HAS_GET;
+    }
+
+    if (PropInfo->Setter)
+    {
+        setter = MakeMethod(PropInfo->Setter, PropInfo->SetterData);
+        flag |= JS_PROP_HAS_SET;
+        flag |= JS_PROP_WRITABLE;
+    }
+
+    JSAtom propName = JS_NewAtom(ctx, PropInfo->Name);
+    JS_DefineProperty(ctx, Obj, propName, JS_UNDEFINED, getter, setter, flag);
+    JS_FreeAtom(ctx, propName);
+    JS_FreeValue(ctx, getter);
+    JS_FreeValue(ctx, setter);
 }
 
 JSValue CppObjectMapper::CreateClass(const puerts::JSClassDefinition* ClassDefinition)
@@ -205,26 +238,28 @@ JSValue CppObjectMapper::CreateClass(const puerts::JSClassDefinition* ClassDefin
         puerts::JSPropertyInfo* PropertyInfo = ClassDefinition->Properties;
         while (PropertyInfo && PropertyInfo->Name)
         {
+            InitProperty(PropertyInfo, proto);
             ++PropertyInfo;
         }
 
         PropertyInfo = ClassDefinition->Variables;
         while (PropertyInfo && PropertyInfo->Name)
         {
+            InitProperty(PropertyInfo, func);
             ++PropertyInfo;
         }
 
         puerts::JSFunctionInfo* FunctionInfo = ClassDefinition->Methods;
         while (FunctionInfo && FunctionInfo->Name && FunctionInfo->Callback)
         {
-            CreateMethod(FunctionInfo->Name, FunctionInfo->Callback, FunctionInfo->Data, proto);
+            InitMethod(FunctionInfo, proto);
             ++FunctionInfo;
         }
 
         FunctionInfo = ClassDefinition->Functions;
         while (FunctionInfo && FunctionInfo->Name && FunctionInfo->Callback)
         {
-            CreateMethod(FunctionInfo->Name, FunctionInfo->Callback, FunctionInfo->Data, func);
+            InitMethod(FunctionInfo, func);
             ++FunctionInfo;
         }
 
