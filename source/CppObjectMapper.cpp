@@ -301,6 +301,8 @@ void CppObjectMapper::Cleanup()
 pesapi_env_ref create_qjs_env()
 {
     JSRuntime* rt = JS_NewRuntime();
+    // 0x4000: DUMP_LEAKS, 0x8000: DUMP_ATOM_LEAKS
+    JS_SetDumpFlags(rt, 0x4000 | 0x8000);
     JSContext* ctx = JS_NewContext(rt);
     pesapi::qjsimpl::CppObjectMapper* mapper = static_cast<pesapi::qjsimpl::CppObjectMapper*>(malloc(sizeof(pesapi::qjsimpl::CppObjectMapper)));
     
