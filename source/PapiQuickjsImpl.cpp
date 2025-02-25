@@ -623,7 +623,13 @@ void pesapi_close_scope_placement(pesapi_scope scope)
 
 pesapi_value_ref pesapi_create_value_ref(pesapi_env env, pesapi_value pvalue, uint32_t internal_field_count)
 {
-    return {};
+    auto ctx = qjsContextFromPesapiEnv(env);
+    size_t totalSize = sizeof(pesapi_value_ref__) + sizeof(void*) * internal_field_count;
+    auto ret = (pesapi_value_ref)malloc(totalSize);
+    memset(ret, 0, totalSize);
+    JSValue* v = qjsValueFromPesapiValue(pvalue);
+    new (ret) pesapi_value_ref__(ctx, *v, internal_field_count);
+    return ret;
 }
 
 pesapi_value_ref pesapi_duplicate_value_ref(pesapi_value_ref value_ref)
@@ -646,16 +652,31 @@ void pesapi_release_value_ref(pesapi_value_ref value_ref)
 
 pesapi_value pesapi_get_value_from_ref(pesapi_env env, pesapi_value_ref value_ref)
 {
-    return {};
+    auto ctx = qjsContextFromPesapiEnv(env);
+    JSValue* v = allocValueInCurrentScope(ctx);
+    *v = JS_DupValue(ctx, value_ref->value_persistent);
+    return pesapiValueFromQjsValue(v);
 }
 
 void pesapi_set_ref_weak(pesapi_env env, pesapi_value_ref value_ref)
 {
+    auto ctx = qjsContextFromPesapiEnv(env);
+    JS_FreeValue(ctx, value_ref->value_persistent);
 }
 
 bool pesapi_set_owner(pesapi_env env, pesapi_value pvalue, pesapi_value powner)
 {
-    return false;
+    auto ctx = qjsContextFromPesapiEnv(env);
+    JSValue* obj = qjsValueFromPesapiValue(pvalue);
+    JSValue* owner = qjsValueFromPesapiValue(powner);
+    if (JS_IsObject(*owner))
+    {
+        JSAtom key = JS_NewAtom(ctx, "_p_i_only_one_child");
+        JS_DupValue(ctx, *obj);
+        JS_SetProperty(ctx, *owner, key, *obj);
+        JS_FreeAtom(ctx, key);
+    }
+    return true;
 }
 
 pesapi_env_ref pesapi_get_ref_associated_env(pesapi_value_ref value_ref)
@@ -665,7 +686,8 @@ pesapi_env_ref pesapi_get_ref_associated_env(pesapi_value_ref value_ref)
 
 void** pesapi_get_ref_internal_fields(pesapi_value_ref value_ref, uint32_t* pinternal_field_count)
 {
-    return {};
+    *pinternal_field_count = value_ref->internal_field_count;
+    return &value_ref->internal_fields[0];
 }
 
 pesapi_value pesapi_get_property(pesapi_env env, pesapi_value pobject, const char* key)
