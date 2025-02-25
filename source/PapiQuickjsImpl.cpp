@@ -471,7 +471,7 @@ pesapi_value pesapi_get_arg(pesapi_callback_info pinfo, int index)
     }
 }
 
-PESAPI_EXTERN pesapi_env pesapi_get_env(pesapi_callback_info pinfo)
+pesapi_env pesapi_get_env(pesapi_callback_info pinfo)
 {
     return pesapiEnvFromQjsContext(pinfo->ctx);
 }
