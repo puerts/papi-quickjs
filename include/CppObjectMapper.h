@@ -8,6 +8,8 @@
 #include "ObjectCacheNode.h"
 #include "JSClassRegister.h"
 
+#define JS_TAG_EXTERNAL (JS_TAG_FLOAT64 + 1)
+
 namespace pesapi
 {
 namespace qjsimpl
@@ -52,6 +54,8 @@ struct CppObjectMapper
 
     puerts::JSClassDefinition PtrClassDef = JSClassEmptyDefinition;
 
+    JSAtom privateDataKey;
+
     inline static eastl::weak_ptr<int> GetEnvLifeCycleTracker(JSContext* ctx)
     {
         JSRuntime* rt = JS_GetRuntime(ctx);
@@ -84,6 +88,35 @@ struct CppObjectMapper
     {
         ObjectUserData* object_udata = (ObjectUserData*)JS_GetOpaque(val, classId);
         return object_udata ? object_udata->typeInfo->TypeId : nullptr;
+    }
+
+    inline bool GetPrivate(JSValue val, void** outPrr) const
+    {
+        if (!JS_IsObject(val))
+        {
+            return false;
+        }
+   
+        JSValue data = JS_GetProperty(ctx, val, privateDataKey);
+        if (JS_VALUE_GET_TAG(data) == JS_TAG_EXTERNAL)
+        {
+            *outPrr = JS_VALUE_GET_PTR(data);
+        }
+        else
+        {
+            JS_FreeValue(ctx, data);
+        }
+        return true;
+    }
+
+    inline bool SetPrivate(JSValue val, void* ptr)
+    {
+        if (!JS_IsObject(val))
+        {
+            return false;
+        }
+        JS_SetProperty(ctx, val, privateDataKey, JS_MKPTR(JS_TAG_EXTERNAL, ptr));
+        return true;
     }
 
     JSValue CreateFunction(pesapi_callback Callback, void* Data, pesapi_function_finalize Finalize);

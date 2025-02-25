@@ -2,8 +2,6 @@
 #include "pesapi.h"
 #include "PapiData.h"
 
-#define JS_TAG_EXTERNAL (JS_TAG_FLOAT64 + 1)
-
 namespace pesapi
 {
 namespace qjsimpl
@@ -352,10 +350,14 @@ void CppObjectMapper::Initialize(JSContext* ctx_)
 
     PtrClassDef.TypeId = &PtrClassDef;
     PtrClassDef.ScriptName = "__Pointer";
+
+    privateDataKey = JS_NewAtom(ctx, "__papi_private_data");
 }
 
 void CppObjectMapper::Cleanup()
 {
+    JS_FreeAtom(ctx, privateDataKey);
+
     for(auto& kv : TypeIdToFunctionMap)
     {
         JS_FreeValue(ctx, kv.second);

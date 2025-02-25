@@ -663,12 +663,18 @@ void pesapi_set_property(pesapi_env env, pesapi_value pobject, const char* key, 
 
 bool pesapi_get_private(pesapi_env env, pesapi_value pobject, void** out_ptr)
 {
-    return true;
+    auto ctx = qjsContextFromPesapiEnv(env);
+    auto mapper = pesapi::qjsimpl::CppObjectMapper::Get(ctx);
+    JSValue* obj = qjsValueFromPesapiValue(pobject);
+    return mapper->GetPrivate(*obj, out_ptr);
 }
 
 bool pesapi_set_private(pesapi_env env, pesapi_value pobject, void* ptr)
 {
-    return true;
+    auto ctx = qjsContextFromPesapiEnv(env);
+    auto mapper = pesapi::qjsimpl::CppObjectMapper::Get(ctx);
+    JSValue* obj = qjsValueFromPesapiValue(pobject);
+    return mapper->SetPrivate(*obj, ptr);
 }
 
 pesapi_value pesapi_get_property_uint32(pesapi_env env, pesapi_value pobject, uint32_t key)
