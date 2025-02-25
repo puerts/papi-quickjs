@@ -748,7 +748,16 @@ void pesapi_set_property_uint32(pesapi_env env, pesapi_value pobject, uint32_t k
 
 pesapi_value pesapi_call_function(pesapi_env env, pesapi_value pfunc, pesapi_value this_object, int argc, const pesapi_value argv[])
 {
-    return {};
+    auto ctx = qjsContextFromPesapiEnv(env);
+    JSValue* func = qjsValueFromPesapiValue(pfunc);
+    JSValue* thisObj = qjsValueFromPesapiValue(this_object);
+    JSValue *js_argv = (JSValue*)alloca(argc * sizeof(JSValue));
+    for (int i = 0; i < argc; ++i) {
+        js_argv[i] = *qjsValueFromPesapiValue(argv[i]);
+    }
+    JSValue* ret = allocValueInCurrentScope(ctx);
+    *ret = JS_Call(ctx, *func, *thisObj, argc, js_argv);
+    return pesapiValueFromQjsValue(ret);
 }
 
 pesapi_value pesapi_eval(pesapi_env env, const uint8_t* code, size_t code_size, const char* path)
