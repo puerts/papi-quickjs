@@ -7,8 +7,52 @@
 namespace pesapi {
 namespace qjsimpl {
 
+struct TestStruct {
+    static int ctor_count;
+    static int dtor_count;
+    static TestStruct* lastCtorObject;
+    static TestStruct* lastDtorObject;
+    TestStruct(int a) {
+        this->a = a;
+        ctor_count++;
+        lastCtorObject = this;
+    }
+
+    int a;
+    ~TestStruct() {
+        dtor_count++;
+        lastDtorObject = this;
+    }
+};
+
+int TestStruct::ctor_count = 0;
+int TestStruct::dtor_count = 0;
+TestStruct* TestStruct::lastCtorObject = nullptr;
+TestStruct* TestStruct::lastDtorObject = nullptr;
+
+void* TestStructCtor(struct pesapi_ffi* apis, pesapi_callback_info info)
+{
+    auto env = apis->get_env(info);
+    auto p0 = apis->get_arg(info, 0);
+    int a = apis->get_value_int32(env, p0);
+    return new TestStruct(a);
+}
+
+void TestStructFinalize(struct pesapi_ffi* apis, void* ptr, void* class_data, void* env_private)
+{
+    delete (TestStruct*)ptr;
+}
+
 class PApiBaseTest : public ::testing::Test {
 public:
+    static void SetUpTestCase() { 
+        const void* typeId = "TestStruct";
+        pesapi_define_class(typeId, NULL, "TestStruct", TestStructCtor, TestStructFinalize, 0, NULL, NULL);
+    }
+
+    static void TearDownTestCase() {
+    }
+
     static void Foo(struct pesapi_ffi* apis, pesapi_callback_info info)
     {
 
@@ -207,49 +251,9 @@ TEST_F(PApiBaseTest, PropertyGetSet) {
     api->close_scope(scope);
 }
 
-struct TestStruct {
-    static int ctor_count;
-    static int dtor_count;
-    static TestStruct* lastCtorObject;
-    static TestStruct* lastDtorObject;
-    TestStruct(int a) {
-        this->a = a;
-        ctor_count++;
-        lastCtorObject = this;
-    }
-
-    int a;
-    ~TestStruct() {
-        dtor_count++;
-        lastDtorObject = this;
-    }
-};
-
-int TestStruct::ctor_count = 0;
-int TestStruct::dtor_count = 0;
-TestStruct* TestStruct::lastCtorObject = nullptr;
-TestStruct* TestStruct::lastDtorObject = nullptr;
-
-void* TestStructCtor(struct pesapi_ffi* apis, pesapi_callback_info info)
-{
-    auto env = apis->get_env(info);
-    auto p0 = apis->get_arg(info, 0);
-    int a = apis->get_value_int32(env, p0);
-    return new TestStruct(a);
-}
-
-void TestStructFinalize(struct pesapi_ffi* apis, void* ptr, void* class_data, void* env_private)
-{
-    delete (TestStruct*)ptr;
-}
-
 TEST_F(PApiBaseTest, ClassCtorFinalize) {
     auto scope = api->open_scope(env_ref);
     auto env = api->get_env_from_ref(env_ref);
-
-    const void* typeId = "TestStruct";
-
-    pesapi_define_class(typeId, NULL, "TestStruct", TestStructCtor, TestStructFinalize, 0, NULL, NULL);
 
     TestStruct::ctor_count = 0;
     TestStruct::dtor_count = 0;
