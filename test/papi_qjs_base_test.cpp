@@ -532,6 +532,26 @@ TEST_F(PApiBaseTest, ReturnAObject) {
     ASSERT_TRUE(apis->get_value_bool(env, ret));
 }
 
+TEST_F(PApiBaseTest, MutiObject) {
+    auto env = apis->get_env_from_ref(env_ref);
+
+    auto code = R"(
+                (function() {
+                    const TestStruct = loadClass('TestStruct');
+                    for (let i = 0; i < 1000; ++i) {
+                        const obj = new TestStruct(123);
+                        const self = obj.GetSelf();
+                    }
+                })();
+              )";
+    auto ret = apis->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
+    if (apis->has_caught(scope))
+    {
+        printf("%s\n", apis->get_exception_as_string(scope, true));
+    }
+    ASSERT_FALSE(apis->has_caught(scope));
+}
+
 TEST_F(PApiBaseTest, RefArgument) {
     auto env = apis->get_env_from_ref(env_ref);
 
