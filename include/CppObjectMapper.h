@@ -121,7 +121,7 @@ struct CppObjectMapper
 
     JSValue CreateFunction(pesapi_callback Callback, void* Data, pesapi_function_finalize Finalize);
 
-    JSValue CreateClassByID(const void* typeId);
+    JSValue FindOrCreateClassByID(const void* typeId);
 
     static JSValue CreateError(JSContext* ctx, const char* message);
 
@@ -129,7 +129,7 @@ struct CppObjectMapper
     void InitMethod(puerts::JSFunctionInfo* FuncInfo, JSValue Obj);
     void InitProperty(puerts::JSPropertyInfo* PropInfo, JSValue Obj);
 
-    JSValue CreateClass(const puerts::JSClassDefinition* ClassDefinition);
+    JSValue FindOrCreateClass(const puerts::JSClassDefinition* ClassDefinition);
 
     void BindAndAddToCache(const puerts::JSClassDefinition* typeInfo, const void* ptr, JSValue value, bool callFinalize);
 

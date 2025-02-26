@@ -152,7 +152,7 @@ JSValue CppObjectMapper::PushNativeObject(const void* TypeId, void* ObjectPtr, b
     {
         ClassDefinition = &PtrClassDef;
     }
-    JSValue ctor = CreateClass(ClassDefinition);
+    JSValue ctor = FindOrCreateClass(ClassDefinition);
     JSValue proto = JS_GetProperty(ctx, ctor, JS_ATOM_prototype);
     JSValue obj = JS_NewObjectProtoClass(ctx, proto, classId);
     JS_FreeValue(ctx, proto);
@@ -224,7 +224,7 @@ void CppObjectMapper::InitProperty(puerts::JSPropertyInfo* PropInfo, JSValue Obj
     JS_FreeValue(ctx, setter);
 }
 
-JSValue CppObjectMapper::CreateClass(const puerts::JSClassDefinition* ClassDefinition)
+JSValue CppObjectMapper::FindOrCreateClass(const puerts::JSClassDefinition* ClassDefinition)
 {
     auto it = TypeIdToFunctionMap.find(ClassDefinition->TypeId);
     if (it == TypeIdToFunctionMap.end())
@@ -312,7 +312,7 @@ JSValue CppObjectMapper::CreateClass(const puerts::JSClassDefinition* ClassDefin
         {
             if (auto SuperDefinition = puerts::FindClassByID(ClassDefinition->SuperTypeId))
             {
-                JSValue super_func = CreateClass(SuperDefinition);
+                JSValue super_func = FindOrCreateClass(SuperDefinition);
                 JSValue parent_proto = JS_GetProperty(ctx, super_func, JS_ATOM_prototype);
                 JS_SetPrototype(ctx, proto, parent_proto);
                 JS_FreeValue(ctx, parent_proto);
@@ -326,14 +326,14 @@ JSValue CppObjectMapper::CreateClass(const puerts::JSClassDefinition* ClassDefin
     return it->second;
 }
 
-JSValue CppObjectMapper::CreateClassByID(const void* typeId)
+JSValue CppObjectMapper::FindOrCreateClassByID(const void* typeId)
 {
     auto clsDef = puerts::LoadClassByID(typeId);
     if (!clsDef)
     {
         return JS_UNDEFINED;
     }
-    return CreateClass(clsDef);
+    return FindOrCreateClass(clsDef);
 }
 
 void CppObjectMapper::Initialize(JSContext* ctx_)

@@ -196,7 +196,7 @@ pesapi_value pesapi_create_class(pesapi_env env, const void* type_id)
 {
     auto ctx = qjsContextFromPesapiEnv(env);
     auto ret = allocValueInCurrentScope(ctx);
-    *ret = pesapi::qjsimpl::CppObjectMapper::Get(ctx)->CreateClassByID(type_id);
+    *ret = pesapi::qjsimpl::CppObjectMapper::Get(ctx)->FindOrCreateClassByID(type_id);
     JS_DupValue(ctx, *ret);
     return pesapiValueFromQjsValue(ret);
 }
