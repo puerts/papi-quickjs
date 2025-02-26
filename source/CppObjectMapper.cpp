@@ -101,7 +101,13 @@ void CppObjectMapper::BindAndAddToCache(const puerts::JSClassDefinition* typeInf
         auto Ret = CDataCache.insert({ptr, FObjectCacheNode(typeInfo->TypeId)});
         CacheNodePtr = &Ret.first->second;
     }
+    CacheNodePtr->MustCallFinalize = callFinalize;
     CacheNodePtr->Value = value;
+
+    if (typeInfo->OnEnter)
+    {
+        CacheNodePtr->UserData = typeInfo->OnEnter((void*)ptr, typeInfo->Data, (void*)GetEnvPrivate());
+    }
 }
 
 void CppObjectMapper::RemoveFromCache(const puerts::JSClassDefinition* typeInfo, const void* ptr)
@@ -109,6 +115,10 @@ void CppObjectMapper::RemoveFromCache(const puerts::JSClassDefinition* typeInfo,
     auto Iter = CDataCache.find(ptr);
     if (Iter != CDataCache.end())
     {
+        if (typeInfo->OnExit)
+        {
+            typeInfo->OnExit( (void*)ptr, typeInfo->Data, (void*)GetEnvPrivate(), Iter->second.UserData);
+        }
         auto Removed = Iter->second.Remove(typeInfo->TypeId, true);
         if (!Iter->second.TypeId)    // last one
         {
@@ -368,6 +378,32 @@ void CppObjectMapper::Initialize(JSContext* ctx_)
 void CppObjectMapper::Cleanup()
 {
     JS_FreeAtom(ctx, privateDataKey);
+
+    auto PData = GetEnvPrivate();
+    for (auto& KV : CDataCache)
+    {
+        FObjectCacheNode* PNode = &KV.second;
+        while (PNode)
+        {
+            const puerts::JSClassDefinition* ClassDefinition = puerts::FindClassByID(PNode->TypeId);
+            // quickjs是可以保证释放的，所以这里不需要释放
+            /*
+            if (PNode->MustCallFinalize)
+            {
+                if (ClassDefinition && ClassDefinition->Finalize)
+                {
+                    ClassDefinition->Finalize(&g_pesapi_ffi, (void*)KV.first, ClassDefinition->Data, (void*)PData);
+                }
+                PNode->MustCallFinalize = false;
+            }
+            */
+            if (ClassDefinition->OnExit)
+            {
+                ClassDefinition->OnExit((void*)KV.first, ClassDefinition->Data, (void*)PData, PNode->UserData);
+            }
+            PNode = PNode->Next;
+        }
+    }
 
     for(auto& kv : TypeIdToFunctionMap)
     {
