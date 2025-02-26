@@ -199,7 +199,33 @@ public:
         pesapi_set_property_info(properties, 3, "ctor_count", true, CtorCountGetterWrap, CtorCountSetterWrap, NULL, NULL, NULL);
         pesapi_set_method_info(properties, 4, "GetSelf", false, GetSelfWrap, NULL, NULL);
         pesapi_set_method_info(properties, 5, "Inc", false, IncWrap, NULL, NULL);
-        pesapi_define_class(typeId, baseTypeId, "TestStruct", TestStructCtor, TestStructFinalize, properties_count, properties, NULL);
+        pesapi_define_class(typeId, baseTypeId, "TestStruct", TestStructCtor, TestStructFinalize, properties_count, properties, (void*)typeId);
+
+        pesapi_trace_native_object_lifecycle(baseTypeId, OnObjEnter, OnObjExit);
+        pesapi_trace_native_object_lifecycle(typeId, OnObjEnter, OnObjExit);
+    }
+
+    static void* BindData;
+    static void* ObjPtr;
+    static void* ClassData;
+    static void* EnvPrivate;
+
+    static void* OnObjEnter(void* ptr, void* class_data, void* env_private)
+    {
+        //printf("OnObjEnter:%p, %p, %p\n", ptr, class_data, env_private);
+        ObjPtr = ptr;
+        ClassData = class_data;
+        EnvPrivate = env_private;
+        return BindData;
+    }
+
+    static void OnObjExit(void* ptr, void* class_data, void* env_private, void* userdata)
+    {
+        //printf("OnObjExit:%p, %p, %p, %p\n", ptr, class_data, env_private, userdata);
+        BindData = userdata;
+        ObjPtr = ptr;
+        ClassData = class_data;
+        EnvPrivate = env_private;
     }
 
     static void TearDownTestCase() {
@@ -620,6 +646,59 @@ TEST_F(PApiBaseTest, SuperAccess) {
     size_t len = sizeof(buff);
     const char* str = apis->get_value_string_utf8(env, ret, buff, &len);
     EXPECT_STREQ("122:11", str);
+}
+
+void* PApiBaseTest::BindData = nullptr;
+void* PApiBaseTest::ObjPtr = nullptr;
+void* PApiBaseTest::ClassData = nullptr;
+void* PApiBaseTest::EnvPrivate = nullptr;
+
+TEST_F(PApiBaseTest, LifecycleTrace) {
+    auto scopeInner = apis->open_scope(env_ref);
+    auto env = apis->get_env_from_ref(env_ref);
+
+    ObjPtr = nullptr;
+    ClassData = nullptr;
+    EnvPrivate = nullptr;
+
+    int p;
+    apis->set_env_private(env, &p);
+    int p2;
+    BindData = &p2;
+
+    auto code = R"(
+                    const TestStruct = loadClass('TestStruct');
+                    obj = new TestStruct(123);
+              )";
+
+    apis->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
+    ASSERT_FALSE(apis->has_caught(scopeInner));
+    EXPECT_EQ(&p, EnvPrivate);
+    EXPECT_EQ((void*)typeId, ClassData);
+    EXPECT_NE(nullptr, ObjPtr);
+
+    void* OrgObjPtr = ObjPtr;
+
+    ObjPtr = nullptr;
+    ClassData = nullptr;
+    EnvPrivate = nullptr;
+    BindData = nullptr;
+
+    code = R"(
+                    obj = undefined;
+              )";
+
+    apis->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
+
+    ASSERT_FALSE(apis->has_caught(scopeInner));
+
+    apis->close_scope(scopeInner); //还存放引用在scope里，通过close_scope释放
+
+    EXPECT_EQ(&p, EnvPrivate);
+    EXPECT_EQ((void*)typeId, ClassData);
+    EXPECT_EQ(OrgObjPtr, ObjPtr);
+    EXPECT_EQ(&p2, BindData);
+
 }
 
 } // namespace qjsimpl
