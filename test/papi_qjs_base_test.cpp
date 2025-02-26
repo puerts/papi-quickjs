@@ -596,6 +596,32 @@ TEST_F(PApiBaseTest, CallFunction) {
     EXPECT_EQ(2, apis->get_value_int32(env, func_call_ret));
 }
 
+TEST_F(PApiBaseTest, SuperAccess) {
+    auto env = apis->get_env_from_ref(env_ref);
+
+    auto code = R"(
+                (function() {
+                    const TestStruct = loadClass('TestStruct');
+                    const obj = new TestStruct(123);
+                    let ret = "" + obj.b + ":"; // 122
+                    obj.b = 5
+                    ret += obj.Foo(6); // 11
+                    return ret;
+                })();
+              )";
+    auto ret = apis->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
+    if (apis->has_caught(scope))
+    {
+        printf("%s\n", apis->get_exception_as_string(scope, true));
+    }
+    ASSERT_FALSE(apis->has_caught(scope));
+    ASSERT_TRUE(apis->is_string(env, ret));
+    char buff[1024];
+    size_t len = sizeof(buff);
+    const char* str = apis->get_value_string_utf8(env, ret, buff, &len);
+    EXPECT_STREQ("122:11", str);
+}
+
 } // namespace qjsimpl
 } // namespace pesapi
 
