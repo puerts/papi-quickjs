@@ -7,12 +7,24 @@
 namespace pesapi {
 namespace qjsimpl {
 
-struct TestStruct {
+struct TestStructBase {
+    TestStructBase(int b) {
+        this->b = b;
+    }
+
+    int b;
+    int Foo(int a)
+    {
+        return a + b;
+    }
+};
+
+struct TestStruct : public TestStructBase {
     static int ctor_count;
     static int dtor_count;
     static TestStruct* lastCtorObject;
     static TestStruct* lastDtorObject;
-    TestStruct(int a) {
+    TestStruct(int a) : TestStructBase(a - 1) {
         this->a = a;
         ctor_count++;
         lastCtorObject = this;
@@ -37,6 +49,8 @@ struct TestStruct {
     }
 };
 
+const void* baseTypeId = "TestStructBase";
+
 const void* typeId = "TestStruct";
 
 int TestStruct::ctor_count = 0;
@@ -55,6 +69,33 @@ static void* TestStructCtor(struct pesapi_ffi* apis, pesapi_callback_info info)
 static void TestStructFinalize(struct pesapi_ffi* apis, void* ptr, void* class_data, void* env_private)
 {
     delete (TestStruct*)ptr;
+}
+
+static void BGetterWrap(struct pesapi_ffi* apis, pesapi_callback_info info)
+{
+    auto env = apis->get_env(info);
+    auto self = apis->get_this(info);
+    auto obj = (TestStructBase*)apis->get_native_object_ptr(env, self);
+    apis->add_return(info, apis->create_int32(env, obj->b));
+}
+
+static void BSetterWrap(struct pesapi_ffi* apis, pesapi_callback_info info)
+{
+    auto env = apis->get_env(info);
+    auto self = apis->get_this(info);
+    auto obj = (TestStructBase*)apis->get_native_object_ptr(env, self);
+    auto p0 = apis->get_arg(info, 0);
+    obj->b = apis->get_value_int32(env, p0);
+}
+
+static void BaseFooWrap(struct pesapi_ffi* apis, pesapi_callback_info info)
+{
+    auto env = apis->get_env(info);
+    auto self = apis->get_this(info);
+    auto obj = (TestStructBase*)apis->get_native_object_ptr(env, self);
+    auto p0 = apis->get_arg(info, 0);
+    int a = apis->get_value_int32(env, p0);
+    apis->add_return(info, apis->create_int32(env, obj->Foo(a)));
 }
 
 static void AddWrap(struct pesapi_ffi* apis, pesapi_callback_info info)
@@ -131,7 +172,25 @@ static void IncWrap(struct pesapi_ffi* apis, pesapi_callback_info info)
 
 class PApiBaseTest : public ::testing::Test {
 public:
-    static void SetUpTestCase() { 
+    static void SetUpTestCase() {
+        // 封装TestStructBase
+        const int base_properties_count = 2;
+        pesapi_property_descriptor base_properties = pesapi_alloc_property_descriptors(base_properties_count);
+        pesapi_set_property_info(base_properties, 0, "b", false, BGetterWrap, BSetterWrap, NULL, NULL, NULL);
+        pesapi_set_method_info(base_properties, 1, "Foo", false, BaseFooWrap, NULL, NULL);
+        pesapi_define_class(baseTypeId, NULL, "TestStructBase", 
+            [](struct pesapi_ffi* apis, pesapi_callback_info info) -> void* { // Ctor
+                auto env = apis->get_env(info);
+                auto p0 = apis->get_arg(info, 0);
+                int b = apis->get_value_int32(env, p0);
+                return new TestStructBase(b);
+            },
+            [](struct pesapi_ffi* apis, void* ptr, void* class_data, void* env_private) { // Finalize
+                delete static_cast<TestStructBase*>(ptr);
+            }, 
+            base_properties_count, base_properties, NULL);
+
+        // 封装TestStruct
         const int properties_count = 6;
         pesapi_property_descriptor properties = pesapi_alloc_property_descriptors(properties_count);
         pesapi_set_method_info(properties, 0, "Add", true, AddWrap, NULL, NULL);
@@ -140,7 +199,7 @@ public:
         pesapi_set_property_info(properties, 3, "ctor_count", true, CtorCountGetterWrap, CtorCountSetterWrap, NULL, NULL, NULL);
         pesapi_set_method_info(properties, 4, "GetSelf", false, GetSelfWrap, NULL, NULL);
         pesapi_set_method_info(properties, 5, "Inc", false, IncWrap, NULL, NULL);
-        pesapi_define_class(typeId, NULL, "TestStruct", TestStructCtor, TestStructFinalize, properties_count, properties, NULL);
+        pesapi_define_class(typeId, baseTypeId, "TestStruct", TestStructCtor, TestStructFinalize, properties_count, properties, NULL);
     }
 
     static void TearDownTestCase() {
@@ -473,6 +532,26 @@ TEST_F(PApiBaseTest, ReturnAObject) {
     ASSERT_TRUE(apis->get_value_bool(env, ret));
 }
 
+TEST_F(PApiBaseTest, MutiObject) {
+    auto env = apis->get_env_from_ref(env_ref);
+
+    auto code = R"(
+                (function() {
+                    const TestStruct = loadClass('TestStruct');
+                    for (let i = 0; i < 1000; ++i) {
+                        const obj = new TestStruct(123);
+                        const self = obj.GetSelf();
+                    }
+                })();
+              )";
+    auto ret = apis->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
+    if (apis->has_caught(scope))
+    {
+        printf("%s\n", apis->get_exception_as_string(scope, true));
+    }
+    ASSERT_FALSE(apis->has_caught(scope));
+}
+
 TEST_F(PApiBaseTest, RefArgument) {
     auto env = apis->get_env_from_ref(env_ref);
 
@@ -495,6 +574,53 @@ TEST_F(PApiBaseTest, RefArgument) {
     EXPECT_EQ(5, apis->get_value_int32(env, ret));
 }
 
+TEST_F(PApiBaseTest, CallFunction) {
+    auto env = apis->get_env_from_ref(env_ref);
+
+    auto code = R"(
+                function sub(x, y) {
+                    return x - y;
+                }
+                sub;
+              )";
+    auto ret = apis->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
+    if (apis->has_caught(scope))
+    {
+        printf("%s\n", apis->get_exception_as_string(scope, true));
+    }
+    ASSERT_FALSE(apis->has_caught(scope));
+    ASSERT_TRUE(apis->is_function(env, ret));
+    pesapi_value argv[2] {apis->create_int32(env, 5), apis->create_int32(env, 3)};
+    auto func_call_ret = apis->call_function(env, ret, nullptr, 2, argv);
+    ASSERT_TRUE(apis->is_int32(env, func_call_ret));
+    EXPECT_EQ(2, apis->get_value_int32(env, func_call_ret));
+}
+
+TEST_F(PApiBaseTest, SuperAccess) {
+    auto env = apis->get_env_from_ref(env_ref);
+
+    auto code = R"(
+                (function() {
+                    const TestStruct = loadClass('TestStruct');
+                    const obj = new TestStruct(123);
+                    let ret = "" + obj.b + ":"; // 122
+                    obj.b = 5
+                    ret += obj.Foo(6); // 11
+                    return ret;
+                })();
+              )";
+    auto ret = apis->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
+    if (apis->has_caught(scope))
+    {
+        printf("%s\n", apis->get_exception_as_string(scope, true));
+    }
+    ASSERT_FALSE(apis->has_caught(scope));
+    ASSERT_TRUE(apis->is_string(env, ret));
+    char buff[1024];
+    size_t len = sizeof(buff);
+    const char* str = apis->get_value_string_utf8(env, ret, buff, &len);
+    EXPECT_STREQ("122:11", str);
+}
 
 } // namespace qjsimpl
 } // namespace pesapi

@@ -1049,6 +1049,8 @@ JS_BOOL JS_GetArrayBufferViewInfo(JSContext *ctx, JSValueConst obj,
                                size_t *pbyte_length,
                                size_t *pbytes_per_element);
 
+int JS_ValueRefCount(JSContext *ctx, JSValue v);
+
 /*-------end additional function---------*/
 
 #ifdef __cplusplus

@@ -55893,4 +55893,13 @@ JS_BOOL JS_GetArrayBufferViewInfo(JSContext *ctx, JSValueConst obj,
     return TRUE;
 }
 
+int JS_ValueRefCount(JSContext *ctx, JSValue v)
+{
+    if (JS_VALUE_HAS_REF_COUNT(v)) {
+        JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
+        return p->ref_count;
+    }
+    return -1;
+}
+
 /*-------end additional function---------*/

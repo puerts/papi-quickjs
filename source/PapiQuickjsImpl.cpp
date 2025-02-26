@@ -197,6 +197,7 @@ pesapi_value pesapi_create_class(pesapi_env env, const void* type_id)
     auto ctx = qjsContextFromPesapiEnv(env);
     auto ret = allocValueInCurrentScope(ctx);
     *ret = pesapi::qjsimpl::CppObjectMapper::Get(ctx)->CreateClassByID(type_id);
+    JS_DupValue(ctx, *ret);
     return pesapiValueFromQjsValue(ret);
 }
 
@@ -471,7 +472,7 @@ pesapi_value pesapi_get_arg(pesapi_callback_info pinfo, int index)
     }
 }
 
-PESAPI_EXTERN pesapi_env pesapi_get_env(pesapi_callback_info pinfo)
+pesapi_env pesapi_get_env(pesapi_callback_info pinfo)
 {
     return pesapiEnvFromQjsContext(pinfo->ctx);
 }
@@ -623,7 +624,13 @@ void pesapi_close_scope_placement(pesapi_scope scope)
 
 pesapi_value_ref pesapi_create_value_ref(pesapi_env env, pesapi_value pvalue, uint32_t internal_field_count)
 {
-    return {};
+    auto ctx = qjsContextFromPesapiEnv(env);
+    size_t totalSize = sizeof(pesapi_value_ref__) + sizeof(void*) * internal_field_count;
+    auto ret = (pesapi_value_ref)malloc(totalSize);
+    memset(ret, 0, totalSize);
+    JSValue* v = qjsValueFromPesapiValue(pvalue);
+    new (ret) pesapi_value_ref__(ctx, *v, internal_field_count);
+    return ret;
 }
 
 pesapi_value_ref pesapi_duplicate_value_ref(pesapi_value_ref value_ref)
@@ -646,16 +653,31 @@ void pesapi_release_value_ref(pesapi_value_ref value_ref)
 
 pesapi_value pesapi_get_value_from_ref(pesapi_env env, pesapi_value_ref value_ref)
 {
-    return {};
+    auto ctx = qjsContextFromPesapiEnv(env);
+    JSValue* v = allocValueInCurrentScope(ctx);
+    *v = JS_DupValue(ctx, value_ref->value_persistent);
+    return pesapiValueFromQjsValue(v);
 }
 
 void pesapi_set_ref_weak(pesapi_env env, pesapi_value_ref value_ref)
 {
+    auto ctx = qjsContextFromPesapiEnv(env);
+    JS_FreeValue(ctx, value_ref->value_persistent);
 }
 
 bool pesapi_set_owner(pesapi_env env, pesapi_value pvalue, pesapi_value powner)
 {
-    return false;
+    auto ctx = qjsContextFromPesapiEnv(env);
+    JSValue* obj = qjsValueFromPesapiValue(pvalue);
+    JSValue* owner = qjsValueFromPesapiValue(powner);
+    if (JS_IsObject(*owner))
+    {
+        JSAtom key = JS_NewAtom(ctx, "_p_i_only_one_child");
+        JS_DupValue(ctx, *obj);
+        JS_SetProperty(ctx, *owner, key, *obj);
+        JS_FreeAtom(ctx, key);
+    }
+    return true;
 }
 
 pesapi_env_ref pesapi_get_ref_associated_env(pesapi_value_ref value_ref)
@@ -665,7 +687,8 @@ pesapi_env_ref pesapi_get_ref_associated_env(pesapi_value_ref value_ref)
 
 void** pesapi_get_ref_internal_fields(pesapi_value_ref value_ref, uint32_t* pinternal_field_count)
 {
-    return {};
+    *pinternal_field_count = value_ref->internal_field_count;
+    return &value_ref->internal_fields[0];
 }
 
 pesapi_value pesapi_get_property(pesapi_env env, pesapi_value pobject, const char* key)
@@ -726,7 +749,16 @@ void pesapi_set_property_uint32(pesapi_env env, pesapi_value pobject, uint32_t k
 
 pesapi_value pesapi_call_function(pesapi_env env, pesapi_value pfunc, pesapi_value this_object, int argc, const pesapi_value argv[])
 {
-    return {};
+    auto ctx = qjsContextFromPesapiEnv(env);
+    JSValue* func = qjsValueFromPesapiValue(pfunc);
+    JSValue* thisObj = this_object ? qjsValueFromPesapiValue(this_object) : &literal_values_undefined;
+    JSValue *js_argv = (JSValue*)alloca(argc * sizeof(JSValue));
+    for (int i = 0; i < argc; ++i) {
+        js_argv[i] = *qjsValueFromPesapiValue(argv[i]);
+    }
+    JSValue* ret = allocValueInCurrentScope(ctx);
+    *ret = JS_Call(ctx, *func, *thisObj, argc, js_argv);
+    return pesapiValueFromQjsValue(ret);
 }
 
 pesapi_value pesapi_eval(pesapi_env env, const uint8_t* code, size_t code_size, const char* path)

@@ -251,7 +251,7 @@ JSValue CppObjectMapper::CreateClass(const puerts::JSClassDefinition* ClassDefin
             {
                 return JS_Throw(ctx, CppObjectMapper::CreateError(ctx, "no initialize function"));
             }
-        }, 0, 0, 3, &ctor_data[0]);
+        }, 0, 0, 3, &ctor_data[0]); // ref_count: 1
 
         JS_SetConstructorBit(ctx, func, 1);
 
@@ -295,11 +295,22 @@ JSValue CppObjectMapper::CreateClass(const puerts::JSClassDefinition* ClassDefin
             ++FunctionInfo;
         }
 
-        JS_SetConstructor(ctx, func, proto);
+        JS_SetConstructor(ctx, func, proto); // func ref_count: 2
         JS_FreeValue(ctx, proto);
 
+        if (ClassDefinition->SuperTypeId)
+        {
+            if (auto SuperDefinition = puerts::FindClassByID(ClassDefinition->SuperTypeId))
+            {
+                JSValue super_func = CreateClass(SuperDefinition);
+                JSValue parent_proto = JS_GetProperty(ctx, super_func, JS_ATOM_prototype);
+                JS_SetPrototype(ctx, proto, parent_proto);
+                JS_FreeValue(ctx, parent_proto);
+            }
+        }
+
         TypeIdToFunctionMap[ClassDefinition->TypeId] = func;
-        JS_DupValue(ctx, func); //JS_FreeValue in Cleanup
+        //printf("register class %s, tid:%p, rc:%d, obj:%p\n", ClassDefinition->ScriptName, ClassDefinition->TypeId, JS_ValueRefCount(ctx, func), JS_VALUE_GET_PTR(func));
         return func;
     }
     return it->second;
