@@ -6,8 +6,6 @@ namespace pesapi
 {
 namespace qjsimpl
 {
-extern pesapi_ffi g_pesapi_ffi;
-
 struct FuncFinalizeData
 {
     pesapi_function_finalize finalize;
