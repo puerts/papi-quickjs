@@ -5,7 +5,7 @@
 #include <EASTL/unordered_map.h>
 #include <EASTL/allocator_malloc.h>
 #include <EASTL/shared_ptr.h>
-#include "ObjectCacheNode.h"
+#include "ObjectCacheNodeQuickjs.h"
 #include "JSClassRegister.h"
 
 #define JS_TAG_EXTERNAL (JS_TAG_FLOAT64 + 1)

@@ -6,7 +6,7 @@
 #include <EASTL/string.h>
 #include <EASTL/vector.h>
 #include <EASTL/allocator_malloc.h>
-#include "CppObjectMapper.h"
+#include "CppObjectMapperQuickjs.h"
 
 enum
 {

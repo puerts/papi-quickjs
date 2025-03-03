@@ -1,5 +1,5 @@
 ﻿#include <gtest/gtest.h>
-#include "CppObjectMapper.h"
+#include "CppObjectMapperQuickjs.h"
 #include <quickjs/quickjs.h>
 #include "pesapi.h"
 #include "JSClassRegister.h"
