@@ -68,12 +68,12 @@ namespace qjsimpl
 
 static struct pesapi_scope__ *getCurrentScope(JSContext *ctx)
 {
-	return (struct pesapi_scope__ *) JS_GetContextOpaque(ctx);
+	return (struct pesapi_scope__ *) JS_GetContextOpaque1(ctx);
 }
 
 static void setCurrentScope(JSContext *ctx, struct pesapi_scope__ *scope)
 {
-	JS_SetContextOpaque(ctx, scope);
+	JS_SetContextOpaque1(ctx, scope);
 }
 
 struct caught_exception_info

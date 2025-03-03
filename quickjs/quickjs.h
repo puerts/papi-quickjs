@@ -1051,6 +1051,12 @@ JS_BOOL JS_GetArrayBufferViewInfo(JSContext *ctx, JSValueConst obj,
 
 int JS_ValueRefCount(JSContext *ctx, JSValue v);
 
+// avoid conflict
+void *JS_GetContextOpaque1(JSContext *ctx);
+void JS_SetContextOpaque1(JSContext *ctx, void *opaque);
+void *JS_GetRuntimeOpaque1(JSRuntime *rt);
+void JS_SetRuntimeOpaque1(JSRuntime *rt, void *opaque);
+
 /*-------end additional function---------*/
 
 #ifdef __cplusplus

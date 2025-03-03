@@ -28,7 +28,7 @@ struct CppObjectMapper
 {
     inline static CppObjectMapper* Get(JSContext* ctx)
     {
-        return reinterpret_cast<CppObjectMapper*>(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
+        return reinterpret_cast<CppObjectMapper*>(JS_GetRuntimeOpaque1(JS_GetRuntime(ctx)));
     }
 
     void Initialize(JSContext* ctx_);
@@ -60,8 +60,7 @@ struct CppObjectMapper
 
     inline static eastl::weak_ptr<int> GetEnvLifeCycleTracker(JSContext* ctx)
     {
-        JSRuntime* rt = JS_GetRuntime(ctx);
-        CppObjectMapper* mapper = reinterpret_cast<CppObjectMapper*>(JS_GetRuntimeOpaque(rt));
+        CppObjectMapper* mapper = Get(ctx);
         return mapper->GetEnvLifeCycleTracker();
     }
 

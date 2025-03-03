@@ -15,7 +15,7 @@ struct FuncFinalizeData
 
 void PApiFuncFinalizer(JSRuntime* rt, JSValue val)
 {
-    CppObjectMapper* mapper = reinterpret_cast<CppObjectMapper*>(JS_GetRuntimeOpaque(rt));
+    CppObjectMapper* mapper = reinterpret_cast<CppObjectMapper*>(JS_GetRuntimeOpaque1(rt));
     FuncFinalizeData* data = (FuncFinalizeData*)JS_GetOpaque(val, mapper->funcTracerClassId);
     if (data->finalize)
     {
@@ -68,7 +68,7 @@ JSValue CppObjectMapper::CreateError(JSContext* ctx, const char* message)
 
 void PApiObjectFinalizer(JSRuntime* rt, JSValue val)
 {
-    CppObjectMapper* mapper = reinterpret_cast<CppObjectMapper*>(JS_GetRuntimeOpaque(rt));
+    CppObjectMapper* mapper = reinterpret_cast<CppObjectMapper*>(JS_GetRuntimeOpaque1(rt));
     ObjectUserData* object_udata = (ObjectUserData*)JS_GetOpaque(val, mapper->classId);
 
     if (object_udata->callFinalize && object_udata->typeInfo->Finalize)
@@ -338,7 +338,7 @@ void CppObjectMapper::Initialize(JSContext* ctx_)
 {
     ctx = ctx_;
     rt = JS_GetRuntime(ctx);
-    JS_SetRuntimeOpaque(rt, this);
+    JS_SetRuntimeOpaque1(rt, this);
     //new (&CDataCache) eastl::unordered_map<const void*, FObjectCacheNode, eastl::hash<const void*>, 
     //        eastl::equal_to<const void*>, eastl::allocator_malloc>();
     //new (&TypeIdToFunctionMap) eastl::unordered_map<const void*, JSValue, eastl::hash<const void*>, 
@@ -441,7 +441,7 @@ void destroy_qjs_env(pesapi_env_ref env_ref)
     //auto scope = pesapi::qjsimpl::g_pesapi_ffi.open_scope(env_ref);
     JSContext* ctx = reinterpret_cast<JSContext*>(pesapi::qjsimpl::g_pesapi_ffi.get_env_from_ref(env_ref));
     JSRuntime* rt = JS_GetRuntime(ctx);
-    pesapi::qjsimpl::CppObjectMapper* mapper = reinterpret_cast<pesapi::qjsimpl::CppObjectMapper*>(JS_GetRuntimeOpaque(rt));
+    pesapi::qjsimpl::CppObjectMapper* mapper = pesapi::qjsimpl::CppObjectMapper::Get(ctx);
     //pesapi::qjsimpl::g_pesapi_ffi.close_scope(scope);
     pesapi::qjsimpl::g_pesapi_ffi.release_env_ref(env_ref);
     mapper->Cleanup();
