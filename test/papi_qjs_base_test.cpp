@@ -712,6 +712,18 @@ TEST_F(PApiBaseTest, ObjectPrivate) {
     EXPECT_EQ(true, apis->set_private(env, obj, &t));
     EXPECT_EQ(true, apis->get_private(env, obj, &p));
     EXPECT_EQ(&t, p);
+
+    auto code = R"(
+                function Add() {};
+                Add;
+              )";
+    auto ret = apis->eval(env, (const uint8_t*)(code), strlen(code), "test.js");
+    ASSERT_FALSE(apis->has_caught(scope));
+    ASSERT_TRUE(apis->is_function(env, ret));
+    EXPECT_EQ(true, apis->set_private(env, ret, &t));
+    EXPECT_EQ(true, apis->get_private(env, ret, &p));
+    EXPECT_EQ(&t, p);
+
 }
 
 TEST_F(PApiBaseTest, EvalStrlenPlusOne) {
