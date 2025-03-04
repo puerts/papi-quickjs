@@ -736,6 +736,27 @@ TEST_F(PApiBaseTest, EvalStrlenPlusOne) {
     ASSERT_EQ(0, strncmp("SyntaxError: unexpected token in expression", apis->get_exception_as_string(scope, true), strlen("SyntaxError: unexpected token in expression")));
 }
 
+TEST_F(PApiBaseTest, PendingJobs) {
+    auto env = apis->get_env_from_ref(env_ref);
+
+    auto code = R"(
+                (function() {
+                    new Promise(()=>{
+                        throw new Error('unhandled rejection');
+                    }).catch(error => {
+                        globalThis.g_f = 1;
+                    });
+                })();
+              )";
+    apis->eval(env, (const uint8_t*)(code), strlen(code), "chunk");
+    ASSERT_FALSE(apis->has_caught(scope));
+    code = "globalThis.g_f";
+    auto ret = apis->eval(env, (const uint8_t*)(code), strlen(code), "chunk");
+    ASSERT_FALSE(apis->has_caught(scope));
+    ASSERT_TRUE(apis->is_int32(env, ret));
+    ASSERT_EQ(1, apis->get_value_int32(env, ret));
+}
+
 } // namespace qjsimpl
 } // namespace pesapi
 
