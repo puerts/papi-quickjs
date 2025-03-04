@@ -714,6 +714,16 @@ TEST_F(PApiBaseTest, ObjectPrivate) {
     EXPECT_EQ(&t, p);
 }
 
+TEST_F(PApiBaseTest, EvalStrlenPlusOne) {
+    auto env = apis->get_env_from_ref(env_ref);
+
+    auto code = "\n                    var obj = {}; obj.func();\n                ";
+    // strlen + 1，会导致语法错误
+    auto ret = apis->eval(env, (const uint8_t*)(code), strlen(code) + 1, "chunk");
+    ASSERT_TRUE(apis->has_caught(scope));
+    ASSERT_EQ(0, strncmp("SyntaxError: unexpected token in expression", apis->get_exception_as_string(scope, true), strlen("SyntaxError: unexpected token in expression")));
+}
+
 } // namespace qjsimpl
 } // namespace pesapi
 
