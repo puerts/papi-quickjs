@@ -701,6 +701,19 @@ TEST_F(PApiBaseTest, LifecycleTrace) {
 
 }
 
+TEST_F(PApiBaseTest, ObjectPrivate) {
+    auto env = apis->get_env_from_ref(env_ref);
+    auto obj = apis->create_object(env);
+    void* p = nullptr;
+    EXPECT_EQ(true, apis->get_private(env, obj, &p));
+    EXPECT_EQ(nullptr, p);
+
+    int t = 0;
+    EXPECT_EQ(true, apis->set_private(env, obj, &t));
+    EXPECT_EQ(true, apis->get_private(env, obj, &p));
+    EXPECT_EQ(&t, p);
+}
+
 } // namespace qjsimpl
 } // namespace pesapi
 
