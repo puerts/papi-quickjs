@@ -145,7 +145,7 @@ JSValue CppObjectMapper::PushNativeObject(const void* TypeId, void* ObjectPtr, b
         }
     }
 
-    auto ClassDefinition = puerts::FindClassByID(TypeId);
+    auto ClassDefinition = puerts::LoadClassByID(TypeId);
     if (!ClassDefinition)
     {
         ClassDefinition = &PtrClassDef;
