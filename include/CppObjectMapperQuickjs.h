@@ -105,6 +105,7 @@ struct CppObjectMapper
         }
         else
         {
+            *outPrr = nullptr;
             JS_FreeValue(ctx, data);
         }
         return true;
