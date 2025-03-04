@@ -592,10 +592,13 @@ const char* pesapi_get_exception_as_string(pesapi_scope scope, bool with_stack)
             //JSValue fileNameVal = JS_GetProperty(ctx, scope->caught->exception, JS_ATOM_fileName);
             //JSValue lineNumVal = JS_GetProperty(ctx, scope->caught->exception, JS_ATOM_lineNumber);
             JSValue stackVal = JS_GetProperty(ctx, scope->caught->exception, JS_ATOM_stack);
-            auto stack = JS_ToCString(ctx, stackVal);
-            scope->caught->message += "\n";
-            scope->caught->message += stack;
-            JS_FreeCString(ctx, stack);
+            if (JS_IsString(stackVal))
+            {
+                auto stack = JS_ToCString(ctx, stackVal);
+                scope->caught->message += "\n";
+                scope->caught->message += stack;
+                JS_FreeCString(ctx, stack);
+            }
             JS_FreeValue(ctx, stackVal);
         }
         return scope->caught->message.c_str();
