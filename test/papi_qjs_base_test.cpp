@@ -296,7 +296,9 @@ protected:
     }
 
     void TearDown() override {
-        apis->close_scope(scope);
+        if (scope) {
+            apis->close_scope(scope);
+        }
         //printf("TearDown\n");
         if (env_ref) {
             destroy_qjs_env(env_ref);
@@ -737,6 +739,8 @@ TEST_F(PApiBaseTest, EvalStrlenPlusOne) {
 }
 
 TEST_F(PApiBaseTest, PendingJobs) {
+    apis->close_scope(scope);
+    scope = apis->open_scope(env_ref);
     auto env = apis->get_env_from_ref(env_ref);
 
     auto code = R"(
@@ -750,11 +754,15 @@ TEST_F(PApiBaseTest, PendingJobs) {
               )";
     apis->eval(env, (const uint8_t*)(code), strlen(code), "chunk");
     ASSERT_FALSE(apis->has_caught(scope));
+    apis->close_scope(scope);
+
+    scope = apis->open_scope(env_ref);
     code = "globalThis.g_f";
     auto ret = apis->eval(env, (const uint8_t*)(code), strlen(code), "chunk");
     ASSERT_FALSE(apis->has_caught(scope));
     ASSERT_TRUE(apis->is_int32(env, ret));
     ASSERT_EQ(1, apis->get_value_int32(env, ret));
+    
 }
 
 } // namespace qjsimpl
