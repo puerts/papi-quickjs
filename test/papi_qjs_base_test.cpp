@@ -3,6 +3,8 @@
 #include <quickjs/quickjs.h>
 #include "pesapi.h"
 #include "JSClassRegister.h"
+#include "TypeInfo.hpp"
+#include "PString.h"
 
 namespace pesapi {
 namespace qjsimpl {
