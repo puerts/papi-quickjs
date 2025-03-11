@@ -1,4 +1,6 @@
 #include "pesapi.h"
+#include "TypeInfo.hpp"
+#include "PString.h"
 #include "JSClassRegister.h"
 #include <string.h>
 #include <EASTL/vector.h>

@@ -24,16 +24,15 @@ PRAGMA_ENABLE_UNDEFINED_IDENTIFIER_WARNINGS
 #include "PuertsNamespaceDef.h"
 
 #include "pesapi.h"
-#include "TypeInfo.hpp"
-#include "PString.h"
 
 #if USING_IN_UNREAL_ENGINE
 static const FAnsiStringView EditorOnlyPropertySuffix = "_EditorOnly";
 #endif
 
-namespace PUERTS_NAMESPACE
+namespace PUERTS_REG_NAMESPACE
 {
 class CFunctionInfo;
+class PString;
 
 MSVC_PRAGMA(warning(push))
 MSVC_PRAGMA(warning(disable : 4191))

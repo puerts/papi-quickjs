@@ -13,8 +13,10 @@
 #include <EASTL/map.h>
 #include <EASTL/allocator_malloc.h>
 #include <string.h>
+#include "TypeInfo.hpp"
+#include "PString.h"
 
-namespace PUERTS_NAMESPACE
+namespace PUERTS_REG_NAMESPACE
 {
 template <class T>
 static T* PropertyInfoDuplicate(T* Arr)
