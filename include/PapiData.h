@@ -17,6 +17,11 @@ enum
 	JS_ATOM_END,
 };
 
+namespace pesapi
+{
+namespace qjsimpl
+{
+
 struct pesapi_env_ref__
 {
     explicit pesapi_env_ref__(JSContext *ctx)
@@ -61,17 +66,14 @@ struct pesapi_value_ref__ : pesapi_env_ref__
     void* internal_fields[0];
 };
 
-namespace pesapi
-{
-namespace qjsimpl
-{
+struct pesapi_scope__;
 
-static struct pesapi_scope__ *getCurrentScope(JSContext *ctx)
+static pesapi_scope__ *getCurrentScope(JSContext *ctx)
 {
-	return (struct pesapi_scope__ *) JS_GetContextOpaque1(ctx);
+	return (pesapi_scope__ *) JS_GetContextOpaque1(ctx);
 }
 
-static void setCurrentScope(JSContext *ctx, struct pesapi_scope__ *scope)
+static void setCurrentScope(JSContext *ctx, pesapi_scope__ *scope)
 {
 	JS_SetContextOpaque1(ctx, scope);
 }
@@ -82,9 +84,6 @@ struct caught_exception_info
     eastl::basic_string<char, eastl::allocator_malloc> message;
 };
 
-}
-}
-
 struct pesapi_scope__
 {
     const static size_t SCOPE_FIX_SIZE_VALUES_SIZE = 4;
@@ -92,8 +91,8 @@ struct pesapi_scope__
     explicit pesapi_scope__(JSContext *ctx)
 	{
 		this->ctx = ctx;
-		prev_scope = pesapi::qjsimpl::getCurrentScope(ctx);
-		pesapi::qjsimpl::setCurrentScope(ctx, this);
+		prev_scope = getCurrentScope(ctx);
+		setCurrentScope(ctx, this);
 		values_used = 0;
 		caught = nullptr;
 	}
@@ -172,3 +171,6 @@ struct pesapi_callback_info__ {
 	JSValue res;
 	JSValue ex;
 };
+
+}
+}
